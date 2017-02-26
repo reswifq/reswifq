@@ -27,7 +27,7 @@
 
 public func random(_ max: UInt32 = UInt32.max) -> UInt32 {
     #if os(Linux)
-        let val = random() % Int(max)
+        let val = UInt32(random() % Int(max))
     #else
         let val = arc4random_uniform(max)
     #endif
