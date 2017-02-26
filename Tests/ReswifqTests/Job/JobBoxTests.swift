@@ -70,7 +70,7 @@ class JobBoxTests: XCTestCase {
         let decodedBox = try JobBox(data: boxData)
 
         XCTAssertEqual(decodedBox.identifier, box.identifier)
-        XCTAssertEqual(decodedBox.createdAt, box.createdAt)
+        XCTAssertEqual(decodedBox.createdAt.timeIntervalSince1970, box.createdAt.timeIntervalSince1970)
         XCTAssertEqual(decodedBox.type, box.type)
         XCTAssertEqual(decodedBox.job, box.job)
     }

@@ -20,6 +20,7 @@
 //
 
 import XCTest
+import Foundation
 import Dispatch
 @testable import Reswifq
 
