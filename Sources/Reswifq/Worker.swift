@@ -52,7 +52,7 @@ public class Worker {
 
     // MARK: Processing
 
-    private let _queue = DispatchQueue(label: "com.reswifq.BaseWorker", attributes: .concurrent)
+    private let _queue = DispatchQueue(label: "com.reswifq.Worker", attributes: .concurrent)
 
     /**
      Starts the worker processing and wait indefinitely.

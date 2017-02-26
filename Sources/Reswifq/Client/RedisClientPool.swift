@@ -1,8 +1,8 @@
 //
-//  RedisClient.swift
+//  RedisClientPool.swift
 //  Reswifq
 //
-//  Created by Valerio Mazzeo on 23/02/2017.
+//  Created by Valerio Mazzeo on 26/02/2017.
 //  Copyright © 2017 VMLabs Limited. All rights reserved.
 //
 //  This program is free software: you can redistribute it and/or modify
@@ -22,36 +22,43 @@
 import Foundation
 import Pool
 
-public protocol RedisClient {
+// MARK: - RedisClientPool
 
-    func lpush(_ key: String, value: String) throws
+/**
+ A `RedisClientPool` provides a pool of `RedisClient`s.
 
-    func rpoplpush(source: String, destination: String) throws -> String?
-
-    func brpoplpush(source: String, destination: String) throws -> String
-
-    func lrem(_ list: String, value: String, count: Int) throws
-}
-
+ It is important to notice that a `RedisClientPool` is a `RedisClient` itself, meaning that it can be transparently used as a `Queue`'s client.
+ 
+ In fact, this is the recommended usage, but it is also mandatory when running a multi-threaded worker process.
+ 
+ - Attention: Sharing a Redis connection between multiple threads must be avoided, and it's not supported in any way. A `RedisClientPool` must be use instead.
+ */
 public final class RedisClientPool: Pool<RedisClient> {
 
     fileprivate func execute(_ perform: (RedisClient) throws -> Void) throws {
 
         let client = try self.draw()
 
+        // Make sure we return the client to the pool, also in case of error
         defer { self.release(client) }
 
         try perform(client)
     }
 }
 
+// MARK: - RedisClient
+
 extension RedisClientPool: RedisClient {
 
-    public func lpush(_ key: String, value: String) throws {
+    @discardableResult public func lpush(_ key: String, values: [String]) throws -> Int {
+
+        var length: Int!
 
         try self.execute { client in
-            try client.lpush(key, value: value)
+            length = try client.lpush(key, values: values)
         }
+
+        return length
     }
 
     public func rpoplpush(source: String, destination: String) throws -> String? {
@@ -76,10 +83,14 @@ extension RedisClientPool: RedisClient {
         return response
     }
 
-    public func lrem(_ list: String, value: String, count: Int) throws {
+    @discardableResult public func lrem(_ key: String, value: String, count: Int) throws -> Int {
+
+        var count: Int!
 
         try self.execute { client in
-            try client.lrem(list, value: value, count: count)
+            count = try client.lrem(key, value: value, count: count)
         }
+        
+        return count
     }
 }

@@ -1,5 +1,5 @@
 //
-//  Reswiq.swift
+//  Reswifq.swift
 //  Reswifq
 //
 //  Created by Valerio Mazzeo on 21/02/2017.
@@ -21,7 +21,7 @@
 
 import Foundation
 
-public final class Reswiq: Queue {
+public final class Reswifq: Queue {
 
     // MARK: Initialization
 
@@ -46,7 +46,7 @@ public final class Reswiq: Queue {
 
         let encodedJob = try JobBox(job).data().string(using: .utf8)
 
-        try self.client.lpush(Queue.pending, value: encodedJob)
+        try self.client.lpush(Queue.pending, values: [encodedJob])
     }
 
     public func dequeue(wait: Bool = true) throws -> (identifier: JobID, job: Job) {
