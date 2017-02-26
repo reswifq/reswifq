@@ -20,6 +20,7 @@
 //
 
 import XCTest
+import Foundation
 @testable import Reswifq
 
 class DataStringTests: XCTestCase {
