@@ -61,7 +61,7 @@ extension JobBox: DataEncodable, DataDecodable {
         let object = try JSONSerialization.jsonObject(with: data)
 
         guard let dictionary = object as? Dictionary<String, Any> else {
-            fatalError()
+            throw DataDecodableError.invalidData(data)
         }
 
         guard let identifier = dictionary[EncodingKey.identifier] as? String,

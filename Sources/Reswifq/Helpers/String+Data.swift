@@ -29,12 +29,24 @@ public extension String {
 
     public func data(using encoding: Encoding) throws -> Data {
 
-        let encodedString: Data? = self.data(using: encoding)
+        #if os(Linux)
+            /**
+             Encoding an empty string on linux returns `nil`, meanwhile on macOS it returns empty `Data`.
+             Make sure the behaviour is always the same.
+             */
+            guard !self.isEmpty else {
+                return Data()
+            }
+
+            let encodedString: Data? = self.data(using: encoding)
+        #else
+            let encodedString: Data? = self.data(using: encoding)
+        #endif
 
         guard let data = encodedString else {
             throw ConversionError.dataConversionError
         }
-
+        
         return data
     }
 }
