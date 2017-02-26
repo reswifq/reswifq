@@ -74,6 +74,30 @@ class JobBoxTests: XCTestCase {
         XCTAssertEqual(decodedBox.type, box.type)
         XCTAssertEqual(decodedBox.job, box.job)
     }
+
+    func testDecodeInvalidData() throws {
+
+        let dictionaryData: [[String: Any]] = [["test": "test"]]
+
+        let rawData = try JSONSerialization.data(withJSONObject: dictionaryData)
+
+        XCTAssertThrowsError(try JobBox(data: rawData), "invalidData") { error in
+            XCTAssertEqual(error as? DataDecodableError, DataDecodableError.invalidData(rawData))
+        }
+    }
+
+    func testDecodeInvalidDataWithMissingField() throws {
+
+        let dictionaryData: [String: Any] = [
+            "identifier": "abc123"
+        ]
+
+        let rawData = try JSONSerialization.data(withJSONObject: dictionaryData)
+
+        XCTAssertThrowsError(try JobBox(data: rawData), "invalidData") { error in
+            XCTAssertEqual(error as? DataDecodableError, DataDecodableError.invalidData(rawData))
+        }
+    }
 }
 
 extension JobBoxTests {

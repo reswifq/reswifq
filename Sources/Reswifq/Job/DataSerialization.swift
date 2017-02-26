@@ -39,6 +39,17 @@ public protocol DataDecodable {
     init(data: Data) throws
 }
 
-public enum DataDecodableError: Error {
+public enum DataDecodableError: Error, Equatable {
+
     case invalidData(Data)
+
+    // MARK: Equatable
+
+    public static func == (lhs: DataDecodableError, rhs: DataDecodableError) -> Bool {
+
+        switch (lhs, rhs) {
+        case (let .invalidData(lhs), let .invalidData(rhs)):
+            return lhs == rhs
+        }
+    }
 }
