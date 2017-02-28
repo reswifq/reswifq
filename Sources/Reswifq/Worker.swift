@@ -38,11 +38,11 @@ public class Worker {
     public var queue: Queue
 
     /**
-     Defines the average amount of time which a worker's thread
+     Defines the average amount of time (in seconds) which a worker's thread
      has to sleep in between jobs processing.
 
-     When a value of `0` is specified, the worker `dequeue` the jobs
-     setting the wait parameter to false, asking the queue to block the thread
+     When a value of `0` is specified, the worker `dequeue`s jobs,
+     setting the wait parameter to `true`, asking the queue to block the thread
      and return only when a job is available.
     */
     public let averagePollingInterval: UInt32
@@ -59,34 +59,36 @@ public class Worker {
      */
     public func run() {
 
-        let threadShouldWait = self.averagePollingInterval == 0
+        let shouldWaitWhenDequeue = self.averagePollingInterval == 0
 
         let group = DispatchGroup()
         group.enter()
 
-        for index in 0..<self.maxConcurrentJobs {
+        for _ in 0..<self.maxConcurrentJobs {
 
-            print("Spawing worker thread: \(index + 1)")
+            //print("Spawing worker thread: \(index + 1)")
 
             self._queue.async {
 
                 while true {
                     do {
-                        print("Worker[t:\(index + 1)]: Dequeuing job...")
-                        let ref = try self.queue.dequeue(wait: threadShouldWait)
-                        print("Worker[t:\(index + 1)]: Dequeued: \(ref.identifier)")
+                        //print("Worker[t:\(index + 1)]: Dequeuing job...")
+                        let ref = try self.queue.dequeue(wait: shouldWaitWhenDequeue)
+                        //print("Worker[t:\(index + 1)]: Dequeued: \(ref.identifier)")
                         try ref.job.perform()
-                        print("Worker[t:\(index + 1)]: Performed: \(ref.identifier)")
+                        //print("Worker[t:\(index + 1)]: Performed: \(ref.identifier)")
                         try self.queue.complete(ref.identifier)
-                        print("Worker[t:\(index + 1)]: Completed: \(ref.identifier)")
-                    } catch let error {
+                        //print("Worker[t:\(index + 1)]: Completed: \(ref.identifier)")
+                    } catch QueueError.queueIsEmpty {
+                        //print("Worker[t:\(index + 1)]: No job found. Queue is empty.")
+                    } catch /*let error*/ {
                         // Log the error
-                        print("Error: \(error.localizedDescription)")
+                        //print("Error: \(error.localizedDescription)")
                     }
 
-                    if threadShouldWait {
+                    if !shouldWaitWhenDequeue {
                         let waitInterval = random(self.averagePollingInterval)
-                        print("Worker[t:\(index + 1)]: Waiting: \(waitInterval)")
+                        //print("Worker[t:\(index + 1)]: Waiting: \(waitInterval)")
 
                         wait(seconds: waitInterval)
                     }

@@ -31,3 +31,7 @@ public protocol Queue {
 
     func complete(_ job: JobID) throws
 }
+
+public enum QueueError: Error {
+    case queueIsEmpty
+}

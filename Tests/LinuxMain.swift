@@ -28,5 +28,6 @@ XCTMain([
     testCase(DataStringTests.allTests),
     testCase(StringDataTests.allTests),
     testCase(JobTests.allTests),
-    testCase(JobBoxTests.allTests)
+    testCase(JobBoxTests.allTests),
+    testCase(WorkerTests.allTests)
     ])

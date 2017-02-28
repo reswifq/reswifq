@@ -51,7 +51,17 @@ public final class Reswifq: Queue {
 
     public func dequeue(wait: Bool = true) throws -> (identifier: JobID, job: Job) {
 
-        let encodedJob = try self.client.brpoplpush(source: Queue.pending, destination: Queue.processing)
+        var encodedJob: String
+
+        if wait {
+            encodedJob = try self.client.brpoplpush(source: Queue.pending, destination: Queue.processing)
+        } else {
+            guard let result = try self.client.rpoplpush(source: Queue.pending, destination: Queue.processing) else {
+                throw QueueError.queueIsEmpty
+            }
+
+            encodedJob = result
+        }
 
         let jobBox = try JobBox(data: encodedJob.data(using: .utf8))
 
