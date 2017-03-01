@@ -50,7 +50,7 @@ class MemQueue: Queue {
 
     // MARK: Queue
 
-    public func enqueue(_ job: Job) throws {
+    public func enqueue(_ job: Job, priority: QueuePriority = .medium) throws {
         self.queue.async {
             let identifier = UUID().uuidString
             self.jobs[identifier] = job
@@ -58,29 +58,12 @@ class MemQueue: Queue {
         }
     }
 
-    public func dequeue(wait: Bool) throws -> (identifier: JobID, job: Job) {
-
-        guard wait else {
-            return try self.dequeue()
-        }
-
-        while true {
-            do {
-                return try self.dequeue()
-            } catch QueueError.queueIsEmpty {
-
-            } catch let error {
-                throw error
-            }
-        }
-    }
-
-    private func dequeue() throws -> (identifier: JobID, job: Job) {
+    public func dequeue() throws -> PersistedJob? {
 
         return try self.queue.sync {
 
             guard !self.pending.isEmpty else {
-                throw QueueError.queueIsEmpty
+                return nil
             }
 
             let jobID = self.pending.removeFirst()
@@ -88,8 +71,20 @@ class MemQueue: Queue {
             guard let job = self.jobs[jobID] else {
                 throw MemQueueError.dataIntegrityFailure
             }
-            
+
             return (identifier: jobID, job: job)
+        }
+    }
+
+    public func bdequeue() throws -> PersistedJob {
+
+        while true {
+
+            guard let job = try self.dequeue() else {
+                continue
+            }
+
+            return job
         }
     }
 

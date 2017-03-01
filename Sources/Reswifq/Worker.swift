@@ -26,16 +26,17 @@ public class Worker {
 
     // MARK: Initialization
 
-    public init(queue: Queue, maxConcurrentJobs: UInt = 10, averagePollingInterval: UInt32 = 0) {
+    public init(queue: Queue, maxConcurrentJobs: Int = 10, averagePollingInterval: UInt32 = 0) {
         self.queue = queue
-        self.maxConcurrentJobs = maxConcurrentJobs
+        self.maxConcurrentJobs = max(1, maxConcurrentJobs)
         self.averagePollingInterval = averagePollingInterval
+        self.semaphore = DispatchSemaphore(value: maxConcurrentJobs)
     }
 
     // MARK: Setting and Getting Attributes
 
     /// The source queue of the worker process.
-    public var queue: Queue
+    public let queue: Queue
 
     /**
      Defines the average amount of time (in seconds) which a worker's thread
@@ -47,55 +48,62 @@ public class Worker {
     */
     public let averagePollingInterval: UInt32
 
-    /// The maximum number of concurrent jobs this worker process can handle at the same time
-    public let maxConcurrentJobs: UInt
+    /**
+     The maximum number of concurrent jobs this worker process can handle at the same time.
+     The minimum value is capped to 1.
+     */
+    public let maxConcurrentJobs: Int
 
     // MARK: Processing
 
-    private let _queue = DispatchQueue(label: "com.reswifq.Worker", attributes: .concurrent)
+    private let dispatchQueue = DispatchQueue(label: "com.reswifq.Worker", attributes: .concurrent)
+
+    private let semaphore: DispatchSemaphore
 
     /**
      Starts the worker processing and wait indefinitely.
      */
     public func run() {
 
-        let shouldWaitWhenDequeue = self.averagePollingInterval == 0
+        while true {
 
-        let group = DispatchGroup()
-        group.enter()
-
-        for _ in 0..<self.maxConcurrentJobs {
-
-            //print("Spawing worker thread: \(index + 1)")
-
-            self._queue.async {
-
-                while true {
-                    do {
-                        //print("Worker[t:\(index + 1)]: Dequeuing job...")
-                        let ref = try self.queue.dequeue(wait: shouldWaitWhenDequeue)
-                        //print("Worker[t:\(index + 1)]: Dequeued: \(ref.identifier)")
-                        try ref.job.perform()
-                        //print("Worker[t:\(index + 1)]: Performed: \(ref.identifier)")
-                        try self.queue.complete(ref.identifier)
-                        //print("Worker[t:\(index + 1)]: Completed: \(ref.identifier)")
-                    } catch QueueError.queueIsEmpty {
-                        //print("Worker[t:\(index + 1)]: No job found. Queue is empty.")
-                    } catch /*let error*/ {
-                        // Log the error
-                        //print("Error: \(error.localizedDescription)")
-                    }
-
-                    if !shouldWaitWhenDequeue {
-                        let waitInterval = random(self.averagePollingInterval)
-                        //print("Worker[t:\(index + 1)]: Waiting: \(waitInterval)")
-
-                        wait(seconds: waitInterval)
-                    }
-                }
+            guard self.semaphore.wait(timeout: .distantFuture) == .success else {
+                continue // Not sure if this can ever happen when using distantFuture
             }
-        }
 
-        group.wait()
+            let workItem = self.makeWorkItem {
+                if self.averagePollingInterval > 0 {
+                    wait(seconds: random(self.averagePollingInterval))
+                }
+
+                self.semaphore.signal()
+            }
+
+            self.dispatchQueue.async(execute: workItem)
+        }
+    }
+
+    private func makeWorkItem(_ completion: (() -> Void)? = nil) -> DispatchWorkItem {
+
+        return DispatchWorkItem(block: {
+
+            defer { completion?() }
+
+            do {
+                guard let persistedJob = self.averagePollingInterval == 0
+                    ? try self.queue.bdequeue()
+                    : try self.queue.dequeue()
+                    else {
+                        return // Nothing to process
+                }
+
+                try persistedJob.job.perform()
+                try self.queue.complete(persistedJob.identifier)
+
+            } catch let error {
+                // Log the error
+                print("Error: \(error.localizedDescription)")
+            }
+        })
     }
 }

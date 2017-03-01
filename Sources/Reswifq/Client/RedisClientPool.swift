@@ -35,62 +35,12 @@ import Pool
  */
 public final class RedisClientPool: Pool<RedisClient> {
 
-    fileprivate func execute(_ perform: (RedisClient) throws -> Void) throws {
-
+    public func execute(_ command: String, arguments: [String]) throws -> String {
         let client = try self.draw()
 
         // Make sure we return the client to the pool, also in case of error
         defer { self.release(client) }
 
-        try perform(client)
-    }
-}
-
-// MARK: - RedisClient
-
-extension RedisClientPool: RedisClient {
-
-    @discardableResult public func lpush(_ key: String, values: [String]) throws -> Int {
-
-        var length: Int!
-
-        try self.execute { client in
-            length = try client.lpush(key, values: values)
-        }
-
-        return length
-    }
-
-    public func rpoplpush(source: String, destination: String) throws -> String? {
-
-        var response: String?
-
-        try self.execute { client in
-            response = try client.rpoplpush(source: source, destination: destination)
-        }
-
-        return response
-    }
-
-    public func brpoplpush(source: String, destination: String) throws -> String {
-
-        var response: String!
-
-        try self.execute { client in
-            response = try client.brpoplpush(source: source, destination: destination)
-        }
-
-        return response
-    }
-
-    @discardableResult public func lrem(_ key: String, value: String, count: Int) throws -> Int {
-
-        var count: Int!
-
-        try self.execute { client in
-            count = try client.lrem(key, value: value, count: count)
-        }
-        
-        return count
+        return try client.execute(command, arguments: arguments)
     }
 }

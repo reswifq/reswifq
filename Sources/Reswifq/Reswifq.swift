@@ -37,31 +37,31 @@ public final class Reswifq: Queue {
 
     // MARK: Queue
 
-    private enum Queue {
-        static let pending = "pending"
-        static let processing = "processing"
-    }
-
-    public func enqueue(_ job: Job) throws {
+    public func enqueue(_ job: Job, priority: QueuePriority = .medium) throws {
 
         let encodedJob = try JobBox(job).data().string(using: .utf8)
 
-        try self.client.lpush(Queue.pending, values: [encodedJob])
+        // TODO: Replace this with the proper method name
+        _ = try self.client.execute(
+            "LPUSH",
+            arguments: RedisKey(.queuePending(priority)).value, encodedJob
+        )
     }
 
-    public func dequeue(wait: Bool = true) throws -> (identifier: JobID, job: Job) {
+    public func dequeue() throws -> PersistedJob? {
 
-        var encodedJob: String
+        var encodedJob: String!
 
-        if wait {
-            encodedJob = try self.client.brpoplpush(source: Queue.pending, destination: Queue.processing)
-        } else {
+        //if wait {
+            //encodedJob = try self.client.brpoplpush(source: Queue.pending, destination: Queue.processing)
+        //} else {
+            /*
             guard let result = try self.client.rpoplpush(source: Queue.pending, destination: Queue.processing) else {
                 throw QueueError.queueIsEmpty
             }
 
-            encodedJob = result
-        }
+            encodedJob = result*/
+        //}
 
         let jobBox = try JobBox(data: encodedJob.data(using: .utf8))
 
@@ -76,7 +76,73 @@ public final class Reswifq: Queue {
         return (identifier: encodedJob, job: job)
     }
 
+    public func bdequeue() throws -> PersistedJob {
+        fatalError()
+    }
+
     public func complete(_ identifier: JobID) throws {
-        try self.client.lrem(Queue.processing, value: identifier, count: -1)
+
+        //let a: String = Key.queue(.pending(.high)).name
+
+        //try self.client.lrem(Queue.processing, value: identifier, count: -1)
+    }
+}
+
+// MARK: RedisKey
+
+extension Reswifq {
+
+    fileprivate struct RedisKey {
+
+        // MARK: Initialization
+
+        public init(_ key: RedisKey.Key) {
+            self.init(key.components)
+        }
+
+        public init(_ components: String...) {
+            self.init(components)
+        }
+
+        public init(_ components: [String]) {
+            self.value = components.joined(separator: ":")
+        }
+
+        // MARK: Attributes
+
+        public let value: String
+    }
+}
+
+extension Reswifq.RedisKey {
+
+    fileprivate enum Key {
+
+        case queuePending(QueuePriority)
+        case queueProcessing
+        case queueDelayed
+
+        case info
+    }
+}
+
+extension Reswifq.RedisKey.Key {
+
+    var components: [String] {
+
+        switch self {
+
+        case .queuePending(let priority):
+            return ["queue", "pending", priority.rawValue]
+
+        case .queueProcessing:
+            return ["queue", "processing"]
+
+        case .queueDelayed:
+            return ["queue", "delayed"]
+
+        case .info:
+            return ["info"]
+        }
     }
 }

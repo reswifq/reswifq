@@ -23,15 +23,24 @@ import Foundation
 
 public typealias JobID = String
 
+public typealias PersistedJob = (identifier: JobID, job: Job)
+
 public protocol Queue {
 
-    func enqueue(_ job: Job) throws
+    func enqueue(_ job: Job, priority: QueuePriority) throws
 
-    func dequeue(wait: Bool) throws -> (identifier: JobID, job: Job)
+    /// Returns the next Job to execute, or `nil` if the queue is empty.
+    func dequeue() throws -> PersistedJob?
+
+    /// Must block the execution until a Job is available.
+    func bdequeue() throws -> PersistedJob
 
     func complete(_ job: JobID) throws
 }
 
-public enum QueueError: Error {
-    case queueIsEmpty
+public enum QueuePriority: String {
+
+    case high = "high"
+    case medium = "medium"
+    case low = "low"
 }
