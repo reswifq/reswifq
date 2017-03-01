@@ -35,7 +35,7 @@ class MemQueue: Queue {
     // MARK: Setting and Getting Attributes
 
     var isEmpty: Bool {
-        return self.pending.isEmpty
+        return self.pendingHigh.isEmpty && self.pendingMedium.isEmpty && self.pendingLow.isEmpty
     }
 
     // MARK: Concurrency Management
@@ -46,15 +46,45 @@ class MemQueue: Queue {
 
     private var jobs = [JobID: Job]()
 
-    private var pending = [JobID]()
+    private var pendingHigh = [JobID]()
+
+    private var pendingMedium = [JobID]()
+
+    private var pendingLow = [JobID]()
 
     // MARK: Queue
 
+    private func queueStorage(for priority: QueuePriority, queue: (inout [JobID]) -> Void) {
+        switch priority {
+        case .high:
+            queue(&self.pendingHigh)
+        case .medium:
+            queue(&self.pendingMedium)
+        case .low:
+            queue(&self.pendingLow)
+        }
+    }
+
     public func enqueue(_ job: Job, priority: QueuePriority = .medium) throws {
+
         self.queue.async {
+
             let identifier = UUID().uuidString
             self.jobs[identifier] = job
-            self.pending.append(identifier)
+
+            self.queueStorage(for: priority) { $0.append(identifier) }
+        }
+    }
+
+    private func _dequeue() -> JobID? {
+        if !self.pendingHigh.isEmpty {
+            return self.pendingHigh.removeFirst()
+        } else if !self.pendingMedium.isEmpty {
+            return self.pendingMedium.removeFirst()
+        } else if !self.pendingLow.isEmpty {
+            return self.pendingLow.removeFirst()
+        } else {
+            return nil
         }
     }
 
@@ -62,11 +92,9 @@ class MemQueue: Queue {
 
         return try self.queue.sync {
 
-            guard !self.pending.isEmpty else {
+            guard let jobID = self._dequeue() else {
                 return nil
             }
-
-            let jobID = self.pending.removeFirst()
 
             guard let job = self.jobs[jobID] else {
                 throw MemQueueError.dataIntegrityFailure
