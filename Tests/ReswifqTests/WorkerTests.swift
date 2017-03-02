@@ -38,17 +38,14 @@ class WorkerTests: XCTestCase {
 
         let queue = MemQueue()
 
-        for _ in 0..<10 {
-            let job = createJobAndExpectPerform()
-            try queue.enqueue(job)
-        }
+        let group = try self.enqueue(10, in: queue)
 
         DispatchQueue(label: "com.reswifq.WorkerTests").async {
             let worker = Worker(queue: queue, maxConcurrentJobs: 1, averagePollingInterval: 0)
             worker.run()
         }
 
-        self.waitForExpectations(timeout: 60.0, handler: nil)
+        self.wait(for: group, timeout: 60.0)
 
         XCTAssertTrue(queue.isEmpty)
     }
@@ -62,9 +59,10 @@ class WorkerTests: XCTestCase {
             worker.run()
         }
 
-        let job = self.createJobAndExpectPerform()
+        let group = DispatchGroup()
+        let job = self.createJob(with: group)
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+        DispatchQueue.global().asyncAfter(deadline: .now() + 2.0) {
             do {
                 try queue.enqueue(job)
             } catch let error {
@@ -72,7 +70,7 @@ class WorkerTests: XCTestCase {
             }
         }
 
-        self.waitForExpectations(timeout: 60.0, handler: nil)
+        self.wait(for: group, timeout: 60.0)
 
         XCTAssertTrue(queue.isEmpty)
     }
@@ -86,9 +84,10 @@ class WorkerTests: XCTestCase {
             worker.run()
         }
 
-        let job = self.createJobAndExpectPerform()
+        let group = DispatchGroup()
+        let job = self.createJob(with: group)
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+        DispatchQueue.global().asyncAfter(deadline: .now() + 2.0) {
             do {
                 try queue.enqueue(job)
             } catch let error {
@@ -96,7 +95,7 @@ class WorkerTests: XCTestCase {
             }
         }
 
-        self.waitForExpectations(timeout: 60.0, handler: nil)
+        self.wait(for: group, timeout: 60.0)
 
         XCTAssertTrue(queue.isEmpty)
     }
@@ -105,17 +104,14 @@ class WorkerTests: XCTestCase {
 
         let queue = MemQueue()
 
-        for _ in 0..<100 {
-            let job = createJobAndExpectPerform()
-            try queue.enqueue(job)
-        }
+        let group = try self.enqueue(100, in: queue)
 
         DispatchQueue(label: "com.reswifq.WorkerTests").async {
             let worker = Worker(queue: queue, maxConcurrentJobs: 10, averagePollingInterval: 1)
             worker.run()
         }
 
-        self.waitForExpectations(timeout: 60.0, handler: nil)
+        self.wait(for: group, timeout: 60.0)
 
         XCTAssertTrue(queue.isEmpty)
     }
@@ -129,12 +125,9 @@ class WorkerTests: XCTestCase {
             worker.run()
         }
 
-        for _ in 0..<1000 {
-            let job = createJobAndExpectPerform()
-            try queue.enqueue(job)
-        }
+        let group = try self.enqueue(1000, in: queue)
 
-        self.waitForExpectations(timeout: 60.0, handler: nil)
+        self.wait(for: group, timeout: 60.0)
 
         XCTAssertTrue(queue.isEmpty)
     }
@@ -142,12 +135,34 @@ class WorkerTests: XCTestCase {
 
 extension WorkerTests {
 
-    fileprivate func createJobAndExpectPerform() -> Job {
+    fileprivate func enqueue(_ numberOfJobs: Int, in queue: Queue) throws -> DispatchGroup {
 
-        let expectation = self.expectation(description: "jobPerform")
-        let job = MockJob() { expectation.fulfill() }
+        let group = DispatchGroup()
 
-        return job
+        for _ in 0..<numberOfJobs {
+            let job = createJob(with: group)
+            try queue.enqueue(job, priority: .medium)
+        }
+
+        return group
+    }
+
+    fileprivate func wait(for group: DispatchGroup, timeout: TimeInterval) {
+
+        guard group.wait(timeout: .now() + timeout) == .success else {
+            XCTFail("Asynchronous wait failed: Exceeded timeout of 60 seconds")
+
+            return
+        }
+    }
+
+    fileprivate func createJob(with group: DispatchGroup) -> Job {
+
+        group.enter()
+
+        return MockJob() {
+            group.leave()
+        }
     }
 
     final class MockJob: Job {
