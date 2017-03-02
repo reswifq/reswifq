@@ -5,8 +5,8 @@ language: generic
 sudo: required
 dist: trusty
 addons:
-  - apt:
-    - packages:
+  apt:
+    packages:
       - redis-server
 osx_image: xcode8.2
 before_install:
