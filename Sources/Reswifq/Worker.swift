@@ -56,30 +56,53 @@ public class Worker {
 
     // MARK: Processing
 
+    private let group = DispatchGroup()
+
     private let dispatchQueue = DispatchQueue(label: "com.reswifq.Worker", attributes: .concurrent)
 
     private let semaphore: DispatchSemaphore
+
+    private var isCancelled: Bool = false
 
     /**
      Starts the worker processing and wait indefinitely.
      */
     public func run() {
 
-        while true {
+        self.isCancelled = false
+
+        while !self.isCancelled {
 
             guard self.semaphore.wait(timeout: .distantFuture) == .success else {
                 continue // Not sure if this can ever happen when using distantFuture
             }
 
+            self.group.enter()
+
             let workItem = self.makeWorkItem {
+
                 if self.averagePollingInterval > 0 {
                     wait(seconds: random(self.averagePollingInterval))
                 }
 
                 self.semaphore.signal()
+
+                self.group.leave()
             }
 
             self.dispatchQueue.async(execute: workItem)
+        }
+    }
+
+    /**
+     Stops the worker processing. This is useful for testing purposes, but probably doesn't have any real case use other than that. 
+     */
+    public func stop(waitUntilAllJobsAreFinished: Bool = false) {
+
+        self.isCancelled = true
+
+        if waitUntilAllJobsAreFinished {
+            self.group.wait()
         }
     }
 

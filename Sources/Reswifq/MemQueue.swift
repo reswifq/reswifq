@@ -30,7 +30,7 @@ enum MemQueueError: Error {
  Simple, thread safe, in memory queue.
  It doesn't implement the Reliable Queue Pattern.
  */
-class MemQueue: Queue {
+public class MemQueue: Queue {
 
     // MARK: Setting and Getting Attributes
 

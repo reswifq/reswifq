@@ -36,26 +36,31 @@ class WorkerTests: XCTestCase {
 
     func testSerialProcessing() throws {
 
-        let queue = MemQueue()
+        let queue = TestQueue()
 
         let group = try self.enqueue(10, in: queue)
 
+        let worker = Worker(queue: queue, maxConcurrentJobs: 1, averagePollingInterval: 0)
+
         DispatchQueue(label: "com.reswifq.WorkerTests").async {
-            let worker = Worker(queue: queue, maxConcurrentJobs: 1, averagePollingInterval: 0)
             worker.run()
         }
 
         self.wait(for: group, timeout: 60.0)
 
         XCTAssertTrue(queue.isEmpty)
+
+        queue.unblockDequeue = true
+        worker.stop(waitUntilAllJobsAreFinished: true)
     }
 
     func testSerialEmptyQueueProcessing() throws {
 
-        let queue = MemQueue()
+        let queue = TestQueue()
+
+        let worker = Worker(queue: queue, maxConcurrentJobs: 1, averagePollingInterval: 1)
 
         DispatchQueue(label: "com.reswifq.WorkerTests").async {
-            let worker = Worker(queue: queue, maxConcurrentJobs: 1, averagePollingInterval: 1)
             worker.run()
         }
 
@@ -73,14 +78,17 @@ class WorkerTests: XCTestCase {
         self.wait(for: group, timeout: 60.0)
 
         XCTAssertTrue(queue.isEmpty)
+
+        worker.stop(waitUntilAllJobsAreFinished: true)
     }
 
     func testSerialEmptyQueueProcessingWithWaitDequeue() throws {
 
-        let queue = MemQueue()
+        let queue = TestQueue()
+
+        let worker = Worker(queue: queue, maxConcurrentJobs: 1, averagePollingInterval: 0)
 
         DispatchQueue(label: "com.reswifq.WorkerTests").async {
-            let worker = Worker(queue: queue, maxConcurrentJobs: 1, averagePollingInterval: 0)
             worker.run()
         }
 
@@ -98,30 +106,37 @@ class WorkerTests: XCTestCase {
         self.wait(for: group, timeout: 60.0)
 
         XCTAssertTrue(queue.isEmpty)
+
+        queue.unblockDequeue = true
+        worker.stop(waitUntilAllJobsAreFinished: true)
     }
 
     func testConcurrentProcessing() throws {
 
-        let queue = MemQueue()
+        let queue = TestQueue()
 
         let group = try self.enqueue(100, in: queue)
 
+        let worker = Worker(queue: queue, maxConcurrentJobs: 10, averagePollingInterval: 1)
+
         DispatchQueue(label: "com.reswifq.WorkerTests").async {
-            let worker = Worker(queue: queue, maxConcurrentJobs: 10, averagePollingInterval: 1)
             worker.run()
         }
 
         self.wait(for: group, timeout: 60.0)
 
         XCTAssertTrue(queue.isEmpty)
+
+        worker.stop(waitUntilAllJobsAreFinished: true)
     }
 
     func testConcurrentProcessingWithWaitDequeue() throws {
 
-        let queue = MemQueue()
+        let queue = TestQueue()
+
+        let worker = Worker(queue: queue, maxConcurrentJobs: 10, averagePollingInterval: 0)
 
         DispatchQueue(label: "com.reswifq.WorkerTests").async {
-            let worker = Worker(queue: queue, maxConcurrentJobs: 10, averagePollingInterval: 0)
             worker.run()
         }
 
@@ -130,6 +145,9 @@ class WorkerTests: XCTestCase {
         self.wait(for: group, timeout: 60.0)
 
         XCTAssertTrue(queue.isEmpty)
+
+        queue.unblockDequeue = true
+        worker.stop(waitUntilAllJobsAreFinished: true)
     }
 }
 
@@ -150,7 +168,7 @@ extension WorkerTests {
     fileprivate func wait(for group: DispatchGroup, timeout: TimeInterval) {
 
         guard group.wait(timeout: .now() + timeout) == .success else {
-            XCTFail("Asynchronous wait failed: Exceeded timeout of 60 seconds")
+            XCTFail("Asynchronous wait failed: Exceeded timeout of \(timeout) seconds")
 
             return
         }
@@ -183,6 +201,29 @@ extension WorkerTests {
 
         func data() throws -> Data {
             fatalError()
+        }
+    }
+
+    enum TestQueueError: Error {
+        case dequeueCancelled
+    }
+
+    class TestQueue: MemQueue {
+
+        var unblockDequeue = false
+
+        override func bdequeue() throws -> PersistedJob {
+
+            while !self.unblockDequeue {
+
+                guard let job = try self.dequeue() else {
+                    continue
+                }
+
+                return job
+            }
+
+            throw TestQueueError.dequeueCancelled
         }
     }
 }
