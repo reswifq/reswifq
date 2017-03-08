@@ -21,6 +21,12 @@
 
 import Foundation
 
+public enum ReswifqError: Error {
+    case unknownJobType(String)
+}
+
+// MARK: - Reswifq
+
 public final class Reswifq: Queue {
 
     // MARK: Initialization
@@ -35,40 +41,70 @@ public final class Reswifq: Queue {
 
     public var jobMap = [String: Job.Type]()
 
+    /**
+     Maximum time a job can stay in the processing queue.
+     After exceeding this interval, the job would be re-enqueued by `reswifc`.
+     */
+    public var timeToLive: TimeInterval = 3600.0 // 1 hour
+
     // MARK: Queue
 
+    /// Priority not supported at the moment
+    /// See https://github.com/antirez/redis/issues/1785
     public func enqueue(_ job: Job, priority: QueuePriority = .medium) throws {
 
         let encodedJob = try JobBox(job).data().string(using: .utf8)
 
-        // TODO: Replace this with the proper method name
-        _ = try self.client.execute(
-            "LPUSH",
-            arguments: RedisKey(.queuePending(priority)).value, encodedJob
-        )
+        //try self.client.lpush(RedisKey(.queuePending(priority)).value, values: encodedJob)
+        try self.client.lpush(RedisKey(.queuePending(.medium)).value, values: encodedJob)
     }
 
     public func dequeue() throws -> PersistedJob? {
 
-        var encodedJob: String!
+        guard let encodedJob = try self.client.rpoplpush(
+            source: RedisKey(.queuePending(.medium)).value,
+            destination: RedisKey(.queueProcessing).value
+        ) else {
+            return nil
+        }
 
-        //if wait {
-            //encodedJob = try self.client.brpoplpush(source: Queue.pending, destination: Queue.processing)
-        //} else {
-            /*
-            guard let result = try self.client.rpoplpush(source: Queue.pending, destination: Queue.processing) else {
-                throw QueueError.queueIsEmpty
-            }
+        let persistedJob = try self.persistedJob(with: encodedJob)
 
-            encodedJob = result*/
-        //}
+        self.setLock(for: persistedJob.identifier)
+
+        return persistedJob
+    }
+
+    public func bdequeue() throws -> PersistedJob {
+
+        let encodedJob = try self.client.brpoplpush(
+            source: RedisKey(.queuePending(.medium)).value,
+            destination: RedisKey(.queueProcessing).value
+        )
+
+        let persistedJob = try self.persistedJob(with: encodedJob)
+
+        self.setLock(for: persistedJob.identifier)
+
+        return persistedJob
+    }
+
+    public func complete(_ identifier: JobID) throws {
+
+        try self.client.lrem(RedisKey(.queueProcessing).value, value: identifier, count: -1)
+    }
+}
+
+// MARK: - Queue Helpers
+
+extension Reswifq {
+
+    fileprivate func persistedJob(with encodedJob: String) throws -> PersistedJob {
 
         let jobBox = try JobBox(data: encodedJob.data(using: .utf8))
 
-        // TODO: Check timestamp etc etc
-
         guard let jobType = self.jobMap[jobBox.type] else {
-            fatalError() // TODO: Proper error
+            throw ReswifqError.unknownJobType(jobBox.type)
         }
 
         let job = try jobType.init(data: jobBox.job)
@@ -76,15 +112,9 @@ public final class Reswifq: Queue {
         return (identifier: encodedJob, job: job)
     }
 
-    public func bdequeue() throws -> PersistedJob {
-        fatalError()
-    }
+    fileprivate func setLock(for identifier: JobID) {
 
-    public func complete(_ identifier: JobID) throws {
-
-        //let a: String = Key.queue(.pending(.high)).name
-
-        //try self.client.lrem(Queue.processing, value: identifier, count: -1)
+        try? self.client.setex(RedisKey(.lock(identifier)).value, timeout: self.timeToLive)
     }
 }
 
@@ -120,7 +150,8 @@ extension Reswifq.RedisKey {
 
         case queuePending(QueuePriority)
         case queueProcessing
-        case queueDelayed
+
+        case lock(String)
 
         case info
     }
@@ -138,8 +169,8 @@ extension Reswifq.RedisKey.Key {
         case .queueProcessing:
             return ["queue", "processing"]
 
-        case .queueDelayed:
-            return ["queue", "delayed"]
+        case .lock(let value):
+            return ["lock", value]
 
         case .info:
             return ["info"]

@@ -1,8 +1,8 @@
 //
-//  LinuxMain.swift
+//  main.swift
 //  Reswifq
 //
-//  Created by Valerio Mazzeo on 18/02/2017.
+//  Created by Valerio Mazzeo on 24/02/2017.
 //  Copyright © 2017 VMLabs Limited. All rights reserved.
 //
 //  This program is free software: you can redistribute it and/or modify
@@ -19,18 +19,5 @@
 //  along with this program. If not, see <http://www.gnu.org/licenses/>.
 //
 
-import XCTest
-@testable import ReswifqTests
-
-XCTMain([
-    testCase(RandomTests.allTests),
-    testCase(WaitTests.allTests),
-    testCase(DataStringTests.allTests),
-    testCase(StringDataTests.allTests),
-    testCase(JobTests.allTests),
-    testCase(JobBoxTests.allTests),
-    testCase(WorkerTests.allTests),
-    testCase(RedisClientResponseTests.allTests),
-    testCase(RedisClientPoolTests.allTests),
-    testCase(RedisClientTests.allTests)
-    ])
+import Foundation
+import Reswifq

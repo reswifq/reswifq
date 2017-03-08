@@ -35,7 +35,7 @@ import Pool
  */
 public final class RedisClientPool: Pool<RedisClient> {
 
-    public func execute(_ command: String, arguments: [String]) throws -> String {
+    public func execute(_ command: String, arguments: [String]? = nil) throws -> RedisClientResponse {
         let client = try self.draw()
 
         // Make sure we return the client to the pool, also in case of error
