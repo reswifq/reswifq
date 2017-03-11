@@ -29,6 +29,7 @@ struct JobBox {
         self.identifier = UUID().uuidString
         self.createdAt = Date()
         self.type = type(of: job).type
+        self.timeToLive = job.timeToLive
         self.job = try job.data()
     }
 
@@ -39,6 +40,8 @@ struct JobBox {
     public let createdAt: Date
 
     public let type: String
+
+    public let timeToLive: TimeInterval
 
     public let job: Data
 }
@@ -51,6 +54,7 @@ extension JobBox: DataEncodable, DataDecodable {
         static let identifier = "identifier"
         static let createdAt = "createdAt"
         static let type = "type"
+        static let timeToLive = "timeToLive"
         static let job = "job"
     }
 
@@ -67,6 +71,7 @@ extension JobBox: DataEncodable, DataDecodable {
         guard let identifier = dictionary[EncodingKey.identifier] as? String,
             let createdAt = dictionary[EncodingKey.createdAt] as? TimeInterval,
             let type = dictionary[EncodingKey.type] as? String,
+            let timeToLive = dictionary[EncodingKey.timeToLive] as? TimeInterval,
             let job = dictionary[EncodingKey.job] as? String
             else {
                 throw DataDecodableError.invalidData(data)
@@ -75,6 +80,7 @@ extension JobBox: DataEncodable, DataDecodable {
         self.identifier = identifier
         self.createdAt = Date(timeIntervalSince1970: createdAt)
         self.type = type
+        self.timeToLive = timeToLive
         self.job = try job.data(using: .utf8)
     }
 
@@ -86,6 +92,7 @@ extension JobBox: DataEncodable, DataDecodable {
             EncodingKey.identifier: self.identifier,
             EncodingKey.createdAt: self.createdAt.timeIntervalSince1970,
             EncodingKey.type: self.type,
+            EncodingKey.timeToLive: self.timeToLive,
             EncodingKey.job: try self.job.string(using: .utf8)
         ]
         

@@ -44,6 +44,12 @@ public protocol Job: DataEncodable, DataDecodable {
     static var type: String { get }
 
     /**
+     Maximum time a job can stay in the processing queue.
+     After exceeding this interval, the job would be re-enqueued by `reswifc`.
+     */
+    var timeToLive: TimeInterval { get }
+
+    /**
      The body of the job.
 
      A worker execute the job calling this method.
@@ -56,5 +62,9 @@ public extension Job {
 
     static var type: String {
         return String(describing: self)
+    }
+
+    public var timeToLive: TimeInterval {
+        return 3600.0 // 1 hour
     }
 }

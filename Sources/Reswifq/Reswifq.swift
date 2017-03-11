@@ -41,12 +41,6 @@ public final class Reswifq: Queue {
 
     public var jobMap = [String: Job.Type]()
 
-    /**
-     Maximum time a job can stay in the processing queue.
-     After exceeding this interval, the job would be re-enqueued by `reswifc`.
-     */
-    public var timeToLive: TimeInterval = 3600.0 // 1 hour
-
     // MARK: Queue
 
     /// Priority not supported at the moment
@@ -70,7 +64,7 @@ public final class Reswifq: Queue {
 
         let persistedJob = try self.persistedJob(with: encodedJob)
 
-        self.setLock(for: persistedJob.identifier)
+        self.setLock(for: persistedJob)
 
         return persistedJob
     }
@@ -84,7 +78,7 @@ public final class Reswifq: Queue {
 
         let persistedJob = try self.persistedJob(with: encodedJob)
 
-        self.setLock(for: persistedJob.identifier)
+        self.setLock(for: persistedJob)
 
         return persistedJob
     }
@@ -112,9 +106,12 @@ extension Reswifq {
         return (identifier: encodedJob, job: job)
     }
 
-    fileprivate func setLock(for identifier: JobID) {
+    fileprivate func setLock(for persistedJob: PersistedJob) {
 
-        try? self.client.setex(RedisKey(.lock(identifier)).value, timeout: self.timeToLive)
+        try? self.client.setex(
+            RedisKey(.lock(persistedJob.identifier)).value,
+            timeout: persistedJob.job.timeToLive
+        )
     }
 }
 

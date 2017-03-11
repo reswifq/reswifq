@@ -39,6 +39,7 @@ class JobBoxTests: XCTestCase {
         XCTAssertNotNil(box.identifier)
         XCTAssertEqualWithAccuracy(box.createdAt.timeIntervalSince1970, Date().timeIntervalSince1970, accuracy: 2.0)
         XCTAssertEqual(box.type, "MockJob")
+        XCTAssertEqual(box.timeToLive, 3600.0)
         XCTAssertEqual(box.job, Data())
     }
 
@@ -53,6 +54,7 @@ class JobBoxTests: XCTestCase {
             JobBox.EncodingKey.identifier: box.identifier,
             JobBox.EncodingKey.createdAt: box.createdAt.timeIntervalSince1970,
             JobBox.EncodingKey.type: box.type,
+            JobBox.EncodingKey.timeToLive: box.timeToLive,
             JobBox.EncodingKey.job: try job.data().string(using: .utf8)
         ]
 
@@ -72,6 +74,7 @@ class JobBoxTests: XCTestCase {
         XCTAssertEqual(decodedBox.identifier, box.identifier)
         XCTAssertEqualWithAccuracy(decodedBox.createdAt.timeIntervalSince1970, box.createdAt.timeIntervalSince1970, accuracy: 0.001)
         XCTAssertEqual(decodedBox.type, box.type)
+        XCTAssertEqual(decodedBox.timeToLive, box.timeToLive)
         XCTAssertEqual(decodedBox.job, box.job)
     }
 
