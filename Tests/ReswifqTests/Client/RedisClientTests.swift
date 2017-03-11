@@ -42,7 +42,181 @@ class RedisClientTests: XCTestCase {
             return RedisClientResponse.null
         }
 
-        _ = try client.execute("TEST", arguments: ["arg1", "arg2"])
+        _ = try client.execute("TEST", arguments: "arg1", "arg2")
+
+        self.waitForExpectations(timeout: 4.0, handler: nil)
+    }
+
+    func testLPUSH() throws {
+
+        let client = MockClient()
+
+        let expectation = self.expectation(description: "execute")
+
+        client.execute = { command, arguments in
+            XCTAssertEqual(command, "LPUSH")
+            XCTAssertEqual(arguments?[0], "test")
+            XCTAssertEqual(arguments?[1], "a")
+            XCTAssertEqual(arguments?[2], "b")
+            XCTAssertEqual(arguments?[3], "c")
+            expectation.fulfill()
+
+            return RedisClientResponse.integer(3)
+        }
+
+        let count = try client.lpush("test", values: "a", "b", "c")
+
+        self.waitForExpectations(timeout: 4.0, handler: nil)
+
+        XCTAssertEqual(count, 3)
+    }
+
+    func testLPUSHError() throws {
+
+        let client = MockClient()
+
+        let expectation = self.expectation(description: "execute")
+
+        client.execute = { command, arguments in
+            expectation.fulfill()
+
+            return RedisClientResponse.null
+        }
+
+        XCTAssertThrowsError(try client.lpush("test", values: "a", "b", "c"), "lpush") { error in
+            XCTAssertTrue(error is RedisClientError)
+        }
+
+        self.waitForExpectations(timeout: 4.0, handler: nil)
+    }
+
+    func testRPOPLPUSH() throws {
+
+        let client = MockClient()
+
+        let expectation = self.expectation(description: "execute")
+
+        client.execute = { command, arguments in
+            XCTAssertEqual(command, "RPOPLPUSH")
+            XCTAssertEqual(arguments?[0], "test")
+            XCTAssertEqual(arguments?[1], "anotherTest")
+            expectation.fulfill()
+
+            return RedisClientResponse.string("a")
+        }
+
+        let item = try client.rpoplpush(source: "test", destination: "anotherTest")
+
+        self.waitForExpectations(timeout: 4.0, handler: nil)
+        
+        XCTAssertEqual(item, "a")
+    }
+
+    func testRPOPLPUSHWithEmptyList() throws {
+
+        let client = MockClient()
+
+        let expectation = self.expectation(description: "execute")
+
+        client.execute = { command, arguments in
+            XCTAssertEqual(command, "RPOPLPUSH")
+            XCTAssertEqual(arguments?[0], "test")
+            XCTAssertEqual(arguments?[1], "anotherTest")
+            expectation.fulfill()
+
+            return RedisClientResponse.null
+        }
+
+        let item = try client.rpoplpush(source: "test", destination: "anotherTest")
+
+        self.waitForExpectations(timeout: 4.0, handler: nil)
+        
+        XCTAssertNil(item)
+    }
+
+    func testRPOPLPUSHError() throws {
+
+        let client = MockClient()
+
+        let expectation = self.expectation(description: "execute")
+
+        client.execute = { command, arguments in
+            XCTAssertEqual(command, "RPOPLPUSH")
+            XCTAssertEqual(arguments?[0], "test")
+            XCTAssertEqual(arguments?[1], "anotherTest")
+            expectation.fulfill()
+
+            return RedisClientResponse.error("error")
+        }
+
+        XCTAssertThrowsError(try client.rpoplpush(source: "test", destination: "anotherTest"), "rpoplpush") { error in
+            XCTAssertTrue(error is RedisClientError)
+        }
+
+        self.waitForExpectations(timeout: 4.0, handler: nil)
+    }
+
+    func testBRPOPLPUSH() throws {
+
+        let client = MockClient()
+
+        let expectation = self.expectation(description: "execute")
+
+        client.execute = { command, arguments in
+            XCTAssertEqual(command, "BRPOPLPUSH")
+            XCTAssertEqual(arguments?[0], "test")
+            XCTAssertEqual(arguments?[1], "anotherTest")
+            expectation.fulfill()
+
+            return RedisClientResponse.string("a")
+        }
+
+        let item = try client.brpoplpush(source: "test", destination: "anotherTest")
+
+        self.waitForExpectations(timeout: 4.0, handler: nil)
+        
+        XCTAssertEqual(item, "a")
+    }
+
+    func testBRPOPLPUSHError() throws {
+
+        let client = MockClient()
+
+        let expectation = self.expectation(description: "execute")
+
+        client.execute = { command, arguments in
+            XCTAssertEqual(command, "BRPOPLPUSH")
+            XCTAssertEqual(arguments?[0], "test")
+            XCTAssertEqual(arguments?[1], "anotherTest")
+            expectation.fulfill()
+
+            return RedisClientResponse.null
+        }
+
+        XCTAssertThrowsError(try client.brpoplpush(source: "test", destination: "anotherTest"), "brpoplpush") { error in
+            XCTAssertTrue(error is RedisClientError)
+        }
+
+        self.waitForExpectations(timeout: 4.0, handler: nil)
+    }
+
+    func testSETEX() throws {
+
+        let client = MockClient()
+
+        let expectation = self.expectation(description: "setex")
+
+        client.execute = { command, arguments in
+            XCTAssertEqual(command, "SETEX")
+            XCTAssertEqual(arguments?[0], "test")
+            XCTAssertEqual(arguments?[1], "60.0")
+            XCTAssertEqual(arguments?[2], "a")
+            expectation.fulfill()
+
+            return RedisClientResponse.status(.ok)
+        }
+
+        try client.setex("test", timeout: 60.0, value: "a")
 
         self.waitForExpectations(timeout: 4.0, handler: nil)
     }

@@ -97,7 +97,7 @@ public extension RedisClient {
     @discardableResult
     func setex(_ key: String, timeout: TimeInterval, value: String? = nil) throws {
 
-        var arguments = [String(timeout)]
+        var arguments = [key, String(timeout)]
         if let value = value {
             arguments.append(value)
         }
