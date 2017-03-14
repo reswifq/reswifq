@@ -69,9 +69,9 @@ extension JobBox: DataEncodable, DataDecodable {
         }
 
         guard let identifier = dictionary[EncodingKey.identifier] as? String,
-            let createdAt = dictionary[EncodingKey.createdAt] as? TimeInterval,
+            let createdAt = JobBox.decodeTimeInterval(dictionary[EncodingKey.createdAt]),
             let type = dictionary[EncodingKey.type] as? String,
-            let timeToLive = dictionary[EncodingKey.timeToLive] as? TimeInterval,
+            let timeToLive = JobBox.decodeTimeInterval(dictionary[EncodingKey.timeToLive]),
             let job = dictionary[EncodingKey.job] as? String
             else {
                 throw DataDecodableError.invalidData(data)
@@ -82,6 +82,40 @@ extension JobBox: DataEncodable, DataDecodable {
         self.type = type
         self.timeToLive = timeToLive
         self.job = try job.data(using: .utf8)
+    }
+
+    private static func decodeTimeInterval(_ value: Any?) -> TimeInterval? {
+
+        guard let value = value else {
+            return nil
+        }
+
+        switch value {
+        case let value as TimeInterval:
+            return value
+        case let value as Int:
+            return TimeInterval(value)
+        case let value as Int8:
+            return TimeInterval(value)
+        case let value as Int16:
+            return TimeInterval(value)
+        case let value as Int32:
+            return TimeInterval(value)
+        case let value as Int64:
+            return TimeInterval(value)
+        case let value as UInt:
+            return TimeInterval(value)
+        case let value as UInt8:
+            return TimeInterval(value)
+        case let value as UInt16:
+            return TimeInterval(value)
+        case let value as UInt32:
+            return TimeInterval(value)
+        case let value as UInt64:
+            return TimeInterval(value)
+        default:
+            return nil
+        }
     }
 
     // MARK: DataEncodable

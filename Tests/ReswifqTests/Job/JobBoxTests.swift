@@ -28,7 +28,9 @@ class JobBoxTests: XCTestCase {
     static let allTests = [
         ("testInitialization", testInitialization),
         ("testEncode", testEncode),
-        ("testDecode", testDecode)
+        ("testDecode", testDecode),
+        ("testDecodeInvalidData", testDecodeInvalidData),
+        ("testDecodeInvalidDataWithMissingField", testDecodeInvalidDataWithMissingField)
     ]
 
     func testInitialization() throws {

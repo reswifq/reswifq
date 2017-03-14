@@ -26,7 +26,8 @@ import Foundation
 class DataStringTests: XCTestCase {
 
     static let allTests = [
-        ("testDataToString", testDataToString)
+        ("testDataToString", testDataToString),
+        ("testInvalidDataString", testInvalidDataString)
     ]
 
     func testDataToString() throws {
@@ -38,11 +39,14 @@ class DataStringTests: XCTestCase {
     }
 
     func testInvalidDataString() {
+        #if os(Linux)
 
-        let data = Data(bytes: [0xf0, 0x28, 0x8c, 0xbc])
+        #else
+            let data = Data(bytes: [0xf0, 0x28, 0x8c, 0xbc])
 
-        XCTAssertThrowsError(try data.string(using: .utf8), "stringConversionError") { error in
-            XCTAssertEqual(error as? Data.ConversionError, Data.ConversionError.stringConversionError)
-        }
+            XCTAssertThrowsError(try data.string(using: .utf8), "stringConversionError") { error in
+                XCTAssertEqual(error as? Data.ConversionError, Data.ConversionError.stringConversionError)
+            }
+        #endif
     }
 }

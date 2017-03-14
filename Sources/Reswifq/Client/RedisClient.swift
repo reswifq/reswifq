@@ -135,7 +135,7 @@ public extension RedisClient {
     @discardableResult
     func zadd(_ key: String, values: [(score: Double, member: String)]) throws -> Int64 {
 
-        var arguments = [String]()
+        var arguments = [key]
 
         for value in values {
             arguments.append(String(value.score))

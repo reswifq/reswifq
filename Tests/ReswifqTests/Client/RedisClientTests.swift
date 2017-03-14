@@ -25,7 +25,20 @@ import XCTest
 class RedisClientTests: XCTestCase {
 
     static let allTests = [
-        ("testExecute", testExecute)
+        ("testExecute", testExecute),
+        ("testLPUSH", testLPUSH),
+        ("testLPUSHError", testLPUSHError),
+        ("testRPOPLPUSH", testRPOPLPUSH),
+        ("testRPOPLPUSHWithEmptyList", testRPOPLPUSHWithEmptyList),
+        ("testRPOPLPUSHError", testRPOPLPUSHError),
+        ("testBRPOPLPUSH", testBRPOPLPUSH),
+        ("testBRPOPLPUSHError", testBRPOPLPUSHError),
+        ("testSETEX", testSETEX),
+        ("testSETEXError", testSETEXError),
+        ("testLREM", testLREM),
+        ("testLREMError", testLREMError),
+        ("testZADD", testZADD),
+        ("testZADDError", testZADDError)
     ]
 
     func testExecute() throws {
@@ -217,6 +230,121 @@ class RedisClientTests: XCTestCase {
         }
 
         try client.setex("test", timeout: 60.0, value: "a")
+
+        self.waitForExpectations(timeout: 4.0, handler: nil)
+    }
+
+    func testSETEXError() throws {
+
+        let client = MockClient()
+
+        let expectation = self.expectation(description: "setex")
+
+        client.execute = { command, arguments in
+            XCTAssertEqual(command, "SETEX")
+            XCTAssertEqual(arguments?[0], "test")
+            XCTAssertEqual(arguments?[1], "60.0")
+            XCTAssertEqual(arguments?[2], "a")
+            expectation.fulfill()
+
+            return RedisClientResponse.error("error")
+        }
+
+        XCTAssertThrowsError(try client.setex("test", timeout: 60.0, value: "a"), "setex") { error in
+            XCTAssertTrue(error is RedisClientError)
+        }
+
+        self.waitForExpectations(timeout: 4.0, handler: nil)
+    }
+
+    func testLREM() throws {
+
+        let client = MockClient()
+
+        let expectation = self.expectation(description: "lrem")
+
+        client.execute = { command, arguments in
+            XCTAssertEqual(command, "LREM")
+            XCTAssertEqual(arguments?[0], "test")
+            XCTAssertEqual(arguments?[1], "-5")
+            XCTAssertEqual(arguments?[2], "a")
+            expectation.fulfill()
+
+            return RedisClientResponse.integer(1)
+        }
+
+        try client.lrem("test", value: "a", count: -5)
+
+        self.waitForExpectations(timeout: 4.0, handler: nil)
+    }
+
+    func testLREMError() throws {
+
+        let client = MockClient()
+
+        let expectation = self.expectation(description: "lrem")
+
+        client.execute = { command, arguments in
+            XCTAssertEqual(command, "LREM")
+            XCTAssertEqual(arguments?[0], "test")
+            XCTAssertEqual(arguments?[1], "-5")
+            XCTAssertEqual(arguments?[2], "a")
+            expectation.fulfill()
+
+            return RedisClientResponse.error("error")
+        }
+
+        XCTAssertThrowsError(try client.lrem("test", value: "a", count: -5), "lrem") { error in
+            XCTAssertTrue(error is RedisClientError)
+        }
+
+        self.waitForExpectations(timeout: 4.0, handler: nil)
+    }
+
+    func testZADD() throws {
+
+        let client = MockClient()
+
+        let expectation = self.expectation(description: "zadd")
+
+        client.execute = { command, arguments in
+            XCTAssertEqual(command, "ZADD")
+            XCTAssertEqual(arguments?[0], "test")
+            XCTAssertEqual(arguments?[1], "1.0")
+            XCTAssertEqual(arguments?[2], "a")
+            XCTAssertEqual(arguments?[3], "2.0")
+            XCTAssertEqual(arguments?[4], "b")
+            expectation.fulfill()
+
+            return RedisClientResponse.integer(2)
+        }
+
+        try client.zadd("test", values: [(score: 1, member: "a"), (score: 2, member: "b")])
+
+        self.waitForExpectations(timeout: 4.0, handler: nil)
+    }
+
+    func testZADDError() throws {
+
+        let client = MockClient()
+
+        let expectation = self.expectation(description: "zadd")
+
+        client.execute = { command, arguments in
+            XCTAssertEqual(command, "ZADD")
+            XCTAssertEqual(arguments?[0], "test")
+            XCTAssertEqual(arguments?[1], "1.0")
+            XCTAssertEqual(arguments?[2], "a")
+            XCTAssertEqual(arguments?[3], "2.0")
+            XCTAssertEqual(arguments?[4], "b")
+            expectation.fulfill()
+
+            return RedisClientResponse.error("error")
+        }
+
+        XCTAssertThrowsError(try client.zadd("test", values: [(score: 1, member: "a"), (score: 2, member: "b")]), "lrem") { error in
+            XCTAssertTrue(error is RedisClientError)
+        }
 
         self.waitForExpectations(timeout: 4.0, handler: nil)
     }
