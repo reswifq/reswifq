@@ -38,7 +38,12 @@ class RedisClientTests: XCTestCase {
         ("testLREM", testLREM),
         ("testLREMError", testLREMError),
         ("testZADD", testZADD),
-        ("testZADDError", testZADDError)
+        ("testZADDError", testZADDError),
+        ("testEnqueueTransaction", testEnqueueTransaction),
+        ("testMULTI", testMULTI),
+        ("testMULTIError", testMULTIError),
+        ("testEnqueueError", testEnqueueError),
+        ("testEXECError", testEXECError)
     ]
 
     func testExecute() throws {
@@ -319,7 +324,7 @@ class RedisClientTests: XCTestCase {
             return RedisClientResponse.integer(2)
         }
 
-        try client.zadd("test", values: [(score: 1, member: "a"), (score: 2, member: "b")])
+        try client.zadd("test", values: (score: 1, member: "a"), (score: 2, member: "b"))
 
         self.waitForExpectations(timeout: 4.0, handler: nil)
     }
@@ -347,6 +352,143 @@ class RedisClientTests: XCTestCase {
         }
 
         self.waitForExpectations(timeout: 4.0, handler: nil)
+    }
+
+    func testEnqueueTransaction() throws {
+
+        let transaction = RedisClientTransaction()
+
+        let expectation = self.expectation(description: "enqueue")
+
+        try transaction.enqueue {
+            defer { expectation.fulfill() }
+            throw RedisClientError.invalidResponse(RedisClientResponse.status(.queued))
+        }
+
+        self.waitForExpectations(timeout: 4.0, handler: nil)
+    }
+
+    func testMULTI() throws {
+
+        let client = MockClient()
+
+        var commands = [String]()
+
+        client.execute = { command, arguments in
+
+            commands.append(command)
+
+            switch command {
+            case "MULTI":
+                return RedisClientResponse.status(.ok)
+            case "EXEC":
+                return RedisClientResponse.array([.status(.ok)])
+            default:
+                throw RedisClientError.invalidResponse(RedisClientResponse.status(.queued))
+            }
+        }
+
+        let responses = try client.multi { transaction in
+            try transaction.enqueue { _ = try client.execute("COMMAND1", arguments: nil) }
+            try transaction.enqueue { _ = try client.execute("COMMAND2", arguments: nil) }
+        }
+
+        XCTAssertEqual(responses.first?.status, .ok)
+        XCTAssertEqual(commands[0], "MULTI")
+        XCTAssertEqual(commands[1], "COMMAND1")
+        XCTAssertEqual(commands[2], "COMMAND2")
+        XCTAssertEqual(commands[3], "EXEC")
+    }
+
+    func testMULTIError() throws {
+
+        let client = MockClient()
+
+        var commands = [String]()
+
+        client.execute = { command, arguments in
+
+            commands.append(command)
+
+            switch command {
+            case "MULTI":
+                return RedisClientResponse.error("error")
+            case "EXEC":
+                return RedisClientResponse.array([.status(.ok)])
+            default:
+                throw RedisClientError.invalidResponse(RedisClientResponse.status(.queued))
+            }
+        }
+
+        XCTAssertThrowsError(try client.multi { transaction in
+            try transaction.enqueue { _ = try client.execute("COMMAND1", arguments: nil) }
+            try transaction.enqueue { _ = try client.execute("COMMAND2", arguments: nil) }
+        }) { error in
+            XCTAssertTrue(error is RedisClientError)
+        }
+    }
+
+    func testEnqueueError() throws {
+
+        let client = MockClient()
+
+        var commands = [String]()
+
+        client.execute = { command, arguments in
+
+            commands.append(command)
+
+            switch command {
+            case "MULTI":
+                return RedisClientResponse.status(.ok)
+            case "DISCARD":
+                return RedisClientResponse.status(.ok)
+            case "EXEC":
+                return RedisClientResponse.array([.status(.ok)])
+            default:
+                throw RedisClientError.invalidResponse(RedisClientResponse.error("error"))
+            }
+        }
+
+        XCTAssertThrowsError(try client.multi { transaction in
+            try transaction.enqueue { _ = try client.execute("COMMAND1", arguments: nil) }
+            try transaction.enqueue { _ = try client.execute("COMMAND2", arguments: nil) }
+        }) { error in
+            switch error as? RedisClientError {
+            case .some(.transactionAborted):
+                break
+            default:
+                XCTFail()
+            }
+        }
+    }
+
+    func testEXECError() throws {
+
+        let client = MockClient()
+
+        var commands = [String]()
+
+        client.execute = { command, arguments in
+
+            commands.append(command)
+
+            switch command {
+            case "MULTI":
+                return RedisClientResponse.status(.ok)
+            case "EXEC":
+                return RedisClientResponse.error("error")
+            default:
+                throw RedisClientError.invalidResponse(RedisClientResponse.status(.queued))
+            }
+        }
+
+        XCTAssertThrowsError(try client.multi { transaction in
+            try transaction.enqueue { _ = try client.execute("COMMAND1", arguments: nil) }
+            try transaction.enqueue { _ = try client.execute("COMMAND2", arguments: nil) }
+        }) { error in
+            XCTAssertTrue(error is RedisClientError)
+        }
     }
 }
 

@@ -27,6 +27,7 @@ public enum RedisClientError: Error {
 
     case invalidResponse(RedisClientResponse)
     case transactionAborted
+    case enqueueCommandError
 }
 
 // MARK: - RedisClient
@@ -159,6 +160,7 @@ public struct RedisClientTransaction {
     public func enqueue(_ command: () throws -> Void) throws {
         do {
             try command()
+            throw RedisClientError.enqueueCommandError
         } catch RedisClientError.invalidResponse(let response) {
             guard response.status == .queued else {
                 throw RedisClientError.invalidResponse(response)
@@ -169,7 +171,7 @@ public struct RedisClientTransaction {
 
 public extension RedisClient {
 
-    func multi(_ commands: (RedisClientTransaction) throws -> Void) throws -> RedisClientResponse {
+    func multi(_ commands: (RedisClientTransaction) throws -> Void) throws -> [RedisClientResponse] {
 
         let response = try self.execute("MULTI", arguments: nil)
 
@@ -184,6 +186,12 @@ public extension RedisClient {
             throw RedisClientError.transactionAborted
         }
 
-        return try self.execute("EXEC", arguments: nil)
+        let execResponse = try self.execute("EXEC", arguments: nil)
+
+        guard let result = execResponse.array else {
+            throw RedisClientError.invalidResponse(response)
+        }
+
+        return result
     }
 }
