@@ -86,6 +86,8 @@ public class Reswifc {
             } catch let error {
                 print("[Reswifc] Error while retrieving processing jobs: \(error.localizedDescription)")
             }
+
+            sleep(self.interval)
         }
     }
 
