@@ -20,6 +20,7 @@
 //
 
 import Foundation
+import RedisClient
 
 public enum ReswifqError: Error {
     case unknownJobType(String)
@@ -85,7 +86,107 @@ public final class Reswifq: Queue {
 
     public func complete(_ identifier: JobID) throws {
 
-        try self.client.lrem(RedisKey(.queueProcessing).value, value: identifier, count: -1)
+        try self.client.multi { client, transaction in
+
+            try transaction.enqueue {
+                // Remove the job from the processing queue
+                try client.lrem(RedisKey(.queueProcessing).value, value: identifier, count: -1)
+            }
+
+            try transaction.enqueue {
+                // Remove the lock
+                try client.del(RedisKey(.lock(identifier)).value)
+            }
+
+            try transaction.enqueue {
+                // Remove any retry attempt
+                try client.del(RedisKey(.retry(identifier)).value)
+            }
+        }
+    }
+}
+
+// MARK: - Queue Status
+
+extension Reswifq {
+
+    /**
+     Fetches any pending job.
+
+     - returns: An array of persisted jobs that have been enqueued and are waiting to be processed.
+     */
+    public func pendingJobs() throws -> [JobID] {
+
+        return try self.client.lrange(RedisKey(.queuePending(.medium)).value, start: 0, stop: -1)
+    }
+
+    /**
+     Fetches any processing job.
+
+     - returns: An array of persisted jobs that have been dequeued and are being processed.
+     */
+    public func processingJobs() throws -> [JobID] {
+
+        return try self.client.lrange(RedisKey(.queueProcessing).value, start: 0, stop: -1)
+    }
+
+    /**
+     Determines whether a job has overcome its time to live in the processing queue.
+     
+     - returns: `true` if the job has expired, `false` otherwise.
+     */
+    public func isJobExpired(_ identifier: JobID) throws -> Bool {
+
+        return try self.client.get(RedisKey(.lock(identifier)).value) == nil
+    }
+
+    /**
+     Fetches the retry attempts for a given job.
+     
+     - parameter identifier: The identifier of the job to retrieve the retry attempts for.
+     
+     - returns: The number of retry attempts for the given jobs.
+     */
+    public func retryAttempts(for identifier: JobID) throws -> Int64 {
+
+        guard let attempts = try self.client.get(RedisKey(.retry(identifier)).value) else {
+            return 0
+        }
+
+        return Int64(attempts) ?? 0
+    }
+
+    /**
+     Moves a job from the processing queue to the pending queue.
+     The operation is performed in a transaction to ensure the job is in either one of the two queues.
+     
+     If the job is not expired the move operation is skipped and no error is thrown.
+     
+     - parameter identifier: The identifier of the job to retry.
+     */
+    public func retryJobIfExpired(_ identifier: JobID) throws {
+
+        guard try self.isJobExpired(identifier) else {
+            return
+        }
+
+        try self.client.multi { client, transaction in
+
+            try transaction.enqueue {
+                // Remove the job from the processing queue
+                try client.lrem(RedisKey(.queueProcessing).value, value: identifier, count: -1)
+            }
+
+            try transaction.enqueue {
+                // Add the job to the pending queue
+                try client.lpush(RedisKey(.queuePending(.medium)).value, values: identifier)
+            }
+
+            try transaction.enqueue {
+                // Increment the job's retry attempts
+                try client.incr(RedisKey(.retry(identifier)).value)
+            }
+        }
     }
 }
 
@@ -110,7 +211,8 @@ extension Reswifq {
 
         try? self.client.setex(
             RedisKey(.lock(persistedJob.identifier)).value,
-            timeout: persistedJob.job.timeToLive
+            timeout: persistedJob.job.timeToLive,
+            value: persistedJob.identifier
         )
     }
 }
@@ -119,7 +221,7 @@ extension Reswifq {
 
 extension Reswifq {
 
-    fileprivate struct RedisKey {
+    struct RedisKey {
 
         // MARK: Initialization
 
@@ -143,14 +245,14 @@ extension Reswifq {
 
 extension Reswifq.RedisKey {
 
-    fileprivate enum Key {
+    enum Key {
 
         case queuePending(QueuePriority)
         case queueProcessing
 
         case lock(String)
 
-        case info
+        case retry(String)
     }
 }
 
@@ -169,8 +271,8 @@ extension Reswifq.RedisKey.Key {
         case .lock(let value):
             return ["lock", value]
 
-        case .info:
-            return ["info"]
+        case .retry(let value):
+            return ["retry", value]
         }
     }
 }

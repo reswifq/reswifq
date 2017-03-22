@@ -1,8 +1,8 @@
 //
-//  main.swift
+//  ReswifcTests.swift
 //  Reswifq
 //
-//  Created by Valerio Mazzeo on 24/02/2017.
+//  Created by Valerio Mazzeo on 22/03/2017.
 //  Copyright © 2017 VMLabs Limited. All rights reserved.
 //
 //  This program is free software: you can redistribute it and/or modify
@@ -19,5 +19,17 @@
 //  along with this program. If not, see <http://www.gnu.org/licenses/>.
 //
 
+import XCTest
 import Foundation
-import Reswifq
+@testable import Reswifq
+
+class ReswifcTests: XCTestCase {
+
+    static let allTests = [
+        ("testExample", testExample)
+    ]
+
+    func testExample() throws {
+
+    }
+}
