@@ -163,11 +163,13 @@ extension Reswifq {
      If the job is not expired the move operation is skipped and no error is thrown.
      
      - parameter identifier: The identifier of the job to retry.
+     - returns: `true` if an retry attempt has been made, `false` otherwise.
      */
-    public func retryJobIfExpired(_ identifier: JobID) throws {
+    @discardableResult
+    public func retryJobIfExpired(_ identifier: JobID) throws -> Bool {
 
         guard try self.isJobExpired(identifier) else {
-            return
+            return false
         }
 
         try self.client.multi { client, transaction in
@@ -187,6 +189,8 @@ extension Reswifq {
                 try client.incr(RedisKey(.retry(identifier)).value)
             }
         }
+        
+        return true
     }
 }
 
