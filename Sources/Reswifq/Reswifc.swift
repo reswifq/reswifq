@@ -63,31 +63,36 @@ public class Reswifc {
 
         while !self.isCancelled {
 
-            do {
-                let jobIDs = try self.queue.processingJobs()
-
-                print("[Reswifc] Analyzing \(jobIDs.count) jobs in the processing queue.")
-
-                for jobID in jobIDs {
-
-                    do {
-                        guard try self.queue.retryAttempts(for: jobID) < self.maxRetryAttempts else {
-                            print("[Reswifc] Removing job from the processing queue: \(jobID)")
-                            try self.queue.complete(jobID)
-                            continue
-                        }
-
-                        try self.queue.retryJobIfExpired(jobID)
-
-                    } catch let error {
-                        print("[Reswifc] Error while retrying job: \(error.localizedDescription)")
-                    }
-                }
-            } catch let error {
-                print("[Reswifc] Error while retrieving processing jobs: \(error.localizedDescription)")
-            }
+            self.runIteration()
 
             sleep(self.interval)
+        }
+    }
+
+    func runIteration() {
+
+        do {
+            let jobIDs = try self.queue.processingJobs()
+
+            print("[Reswifc] Analyzing \(jobIDs.count) jobs in the processing queue.")
+
+            for jobID in jobIDs {
+
+                do {
+                    guard try self.queue.retryAttempts(for: jobID) < self.maxRetryAttempts else {
+                        print("[Reswifc] Removing job from the processing queue: \(jobID)")
+                        try self.queue.complete(jobID)
+                        continue
+                    }
+
+                    try self.queue.retryJobIfExpired(jobID)
+
+                } catch let error {
+                    print("[Reswifc] Error while retrying job: \(error.localizedDescription)")
+                }
+            }
+        } catch let error {
+            print("[Reswifc] Error while retrieving processing jobs: \(error.localizedDescription)")
         }
     }
 

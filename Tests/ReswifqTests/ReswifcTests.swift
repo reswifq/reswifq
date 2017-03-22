@@ -55,10 +55,6 @@ class ReswifcTests: XCTestCase {
 
         let reswifc = Reswifc(queue: self.queue, interval: 1, maxRetryAttempts: 2)
 
-        DispatchQueue(label: "com.reswifq.ReswifcTests").async {
-            reswifc.run()
-        }
-
         try self.queue.enqueue(MockJob(value: "test1"))
         try self.queue.enqueue(MockJob(value: "test2"))
         try self.queue.enqueue(MockJob(value: "test3"))
@@ -67,20 +63,15 @@ class ReswifcTests: XCTestCase {
         let persistedJob = try self.queue.dequeue()
         XCTAssertEqual(try self.queue.pendingJobs().count, 2)
 
-        sleep(2)
+        reswifc.runIteration()
+
         XCTAssertEqual(try self.queue.retryAttempts(for: persistedJob!.identifier), 1)
         XCTAssertEqual(try self.queue.pendingJobs().count, 3)
-
-        reswifc.stop()
     }
 
     func testMaxRetryAttempts() throws {
 
         let reswifc = Reswifc(queue: self.queue, interval: 1, maxRetryAttempts: 1)
-
-        DispatchQueue(label: "com.reswifq.ReswifcTests").async {
-            reswifc.run()
-        }
 
         try self.queue.enqueue(MockJob(value: "test1"))
         XCTAssertEqual(try self.queue.pendingJobs().count, 1)
@@ -88,19 +79,19 @@ class ReswifcTests: XCTestCase {
         let persistedJob = try self.queue.dequeue()
         XCTAssertEqual(try self.queue.pendingJobs().count, 0)
 
-        sleep(2)
+        reswifc.runIteration()
+
         XCTAssertEqual(try self.queue.retryAttempts(for: persistedJob!.identifier), 1)
         XCTAssertEqual(try self.queue.pendingJobs().count, 1)
 
         _ = try self.queue.dequeue()
         XCTAssertEqual(try self.queue.pendingJobs().count, 0)
 
-        sleep(2)
+        reswifc.runIteration()
+
         XCTAssertEqual(try self.queue.retryAttempts(for: persistedJob!.identifier), 0)
         XCTAssertEqual(try self.queue.pendingJobs().count, 0)
         XCTAssertEqual(try self.queue.processingJobs().count, 0)
-
-        reswifc.stop()
     }
 }
 
