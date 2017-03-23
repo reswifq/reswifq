@@ -27,7 +27,7 @@ public typealias PersistedJob = (identifier: JobID, job: Job)
 
 public protocol Queue {
 
-    func enqueue(_ job: Job, priority: QueuePriority) throws
+    func enqueue(_ job: Job, priority: QueuePriority, scheduleAt: Date?) throws
 
     /// Returns the next Job to execute, or `nil` if the queue is empty.
     func dequeue() throws -> PersistedJob?

@@ -30,6 +30,7 @@ XCTMain([
     testCase(JobTests.allTests),
     testCase(JobBoxTests.allTests),
     testCase(WorkerTests.allTests),
+    testCase(MemQueueTests.allTests),
     testCase(ReswifqTests.allTests),
     testCase(ReswifcTests.allTests)
     ])

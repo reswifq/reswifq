@@ -46,12 +46,18 @@ public final class Reswifq: Queue {
 
     /// Priority not supported at the moment
     /// See https://github.com/antirez/redis/issues/1785
-    public func enqueue(_ job: Job, priority: QueuePriority = .medium) throws {
+    public func enqueue(_ job: Job, priority: QueuePriority = .medium, scheduleAt: Date? = nil) throws {
 
-        let encodedJob = try JobBox(job).data().string(using: .utf8)
+        let encodedJob = try JobBox(job, priority: priority).data().string(using: .utf8)
 
-        //try self.client.lpush(RedisKey(.queuePending(priority)).value, values: encodedJob)
-        try self.client.lpush(RedisKey(.queuePending(.medium)).value, values: encodedJob)
+        if let scheduledAt = scheduleAt {
+            // Delayed Job
+            try self.client.zadd(RedisKey(.queueDelayed).value, values: (score: scheduledAt.timeIntervalSince1970, member: encodedJob))
+        } else {
+            // Normal Job
+            //try self.client.lpush(RedisKey(.queuePending(priority)).value, values: encodedJob)
+            try self.client.lpush(RedisKey(.queuePending(.medium)).value, values: encodedJob)
+        }
     }
 
     public func dequeue() throws -> PersistedJob? {
@@ -131,6 +137,49 @@ extension Reswifq {
     }
 
     /**
+     Fetches any delayed job.
+
+     - returns: An array of persisted jobs that have been scheduled for delayed execution.
+     */
+    public func delayedJobs() throws -> [JobID] {
+
+        return try self.client.zrange(RedisKey(.queueDelayed).value, start: 0, stop: -1)
+    }
+
+    /**
+     Fetches any overdue job.
+
+     - returns: An array of persisted jobs that have been scheduled for delayed execution and are now overdue.
+     */
+    public func overdueJobs() throws -> [JobID] {
+
+        return try self.client.zrangebyscore(RedisKey(.queueDelayed).value, min: 0, max: Date().timeIntervalSince1970)
+    }
+
+    public func enqueueOverdueJobs() throws {
+
+        let overdueJobs = try self.overdueJobs()
+
+        for job in overdueJobs {
+
+            try self.client.multi { client, transaction in
+
+                try transaction.enqueue {
+                    // Remove the job from the delayed queue
+                    try client.zrem(RedisKey(.queueDelayed).value, member: job)
+                }
+
+                try transaction.enqueue {
+                    // Add the job to the pending queue
+                    // This is not ideal because subsequent delayed jobs would be executed in reverse order,
+                    // but this is the best solution, until we can support queues with different priorities
+                    try client.rpush(RedisKey(.queuePending(.medium)).value, values: job)
+                }
+            }
+        }
+    }
+
+    /**
      Determines whether a job has overcome its time to live in the processing queue.
      
      - returns: `true` if the job has expired, `false` otherwise.
@@ -142,7 +191,7 @@ extension Reswifq {
 
     /**
      Fetches the retry attempts for a given job.
-     
+
      - parameter identifier: The identifier of the job to retrieve the retry attempts for.
      
      - returns: The number of retry attempts for the given jobs.
@@ -253,6 +302,7 @@ extension Reswifq.RedisKey {
 
         case queuePending(QueuePriority)
         case queueProcessing
+        case queueDelayed
 
         case lock(String)
 
@@ -271,6 +321,9 @@ extension Reswifq.RedisKey.Key {
 
         case .queueProcessing:
             return ["queue", "processing"]
+
+        case .queueDelayed:
+            return ["queue", "delayed"]
 
         case .lock(let value):
             return ["lock", value]

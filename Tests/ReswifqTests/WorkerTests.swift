@@ -159,7 +159,7 @@ extension WorkerTests {
 
         for _ in 0..<numberOfJobs {
             let job = createJob(with: group)
-            try queue.enqueue(job, priority: .medium)
+            try queue.enqueue(job, priority: .medium, scheduleAt: nil)
         }
 
         return group

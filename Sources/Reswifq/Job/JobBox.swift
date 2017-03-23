@@ -25,11 +25,12 @@ struct JobBox {
 
     // MARK: Initializer
 
-    public init(_ job: Job) throws {
+    public init(_ job: Job, priority: QueuePriority = .medium) throws {
         self.identifier = UUID().uuidString
         self.createdAt = Date()
         self.type = type(of: job).type
         self.timeToLive = job.timeToLive
+        self.priority = priority
         self.job = try job.data()
     }
 
@@ -43,6 +44,8 @@ struct JobBox {
 
     public let timeToLive: TimeInterval
 
+    public let priority: QueuePriority
+
     public let job: Data
 }
 
@@ -55,6 +58,7 @@ extension JobBox: DataEncodable, DataDecodable {
         static let createdAt = "createdAt"
         static let type = "type"
         static let timeToLive = "timeToLive"
+        static let priority = "priority"
         static let job = "job"
     }
 
@@ -72,6 +76,7 @@ extension JobBox: DataEncodable, DataDecodable {
             let createdAt = JobBox.decodeTimeInterval(dictionary[EncodingKey.createdAt]),
             let type = dictionary[EncodingKey.type] as? String,
             let timeToLive = JobBox.decodeTimeInterval(dictionary[EncodingKey.timeToLive]),
+            let priority = JobBox.decodeQueuePriority(dictionary[EncodingKey.priority]),
             let job = dictionary[EncodingKey.job] as? String
             else {
                 throw DataDecodableError.invalidData(data)
@@ -81,7 +86,17 @@ extension JobBox: DataEncodable, DataDecodable {
         self.createdAt = Date(timeIntervalSince1970: createdAt)
         self.type = type
         self.timeToLive = timeToLive
+        self.priority = priority
         self.job = try job.data(using: .utf8)
+    }
+
+    private static func decodeQueuePriority(_ value: Any?) -> QueuePriority? {
+
+        guard let value = value as? String else {
+            return nil
+        }
+
+        return QueuePriority(rawValue: value)
     }
 
     private static func decodeTimeInterval(_ value: Any?) -> TimeInterval? {
@@ -127,6 +142,7 @@ extension JobBox: DataEncodable, DataDecodable {
             EncodingKey.createdAt: self.createdAt.timeIntervalSince1970,
             EncodingKey.type: self.type,
             EncodingKey.timeToLive: self.timeToLive,
+            EncodingKey.priority: self.priority.rawValue,
             EncodingKey.job: try self.job.string(using: .utf8)
         ]
         

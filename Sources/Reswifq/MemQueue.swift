@@ -44,7 +44,9 @@ public class MemQueue: Queue {
 
     // MARK: Queue Storage
 
-    private var jobs = [JobID: Job]()
+    private var jobs = [JobID: (job: Job, priority: QueuePriority, scheduleAt: Date?)]()
+
+    private var delayed = [JobID]()
 
     private var pendingHigh = [JobID]()
 
@@ -54,35 +56,75 @@ public class MemQueue: Queue {
 
     // MARK: Queue
 
-    private func queueStorage(for priority: QueuePriority, queue: (inout [JobID]) -> Void) {
-        switch priority {
-        case .high:
+    private func queueStorage(for priority: QueuePriority, isDelayed: Bool, queue: (inout [JobID]) -> Void) {
+
+        switch (priority, isDelayed) {
+
+        // Delayed
+        case (_, true):
+            queue(&self.delayed)
+
+        // Pending
+        case (.high, false):
             queue(&self.pendingHigh)
-        case .medium:
+        case (.medium, false):
             queue(&self.pendingMedium)
-        case .low:
+        case (.low, false):
             queue(&self.pendingLow)
         }
     }
 
-    public func enqueue(_ job: Job, priority: QueuePriority = .medium) throws {
+    public func enqueue(_ job: Job, priority: QueuePriority = .medium, scheduleAt: Date? = nil) throws {
 
         self.queue.async {
 
             let identifier = UUID().uuidString
-            self.jobs[identifier] = job
 
-            self.queueStorage(for: priority) { $0.append(identifier) }
+            self.jobs[identifier] = (job: job, priority: priority, scheduleAt: scheduleAt)
+
+            self.queueStorage(for: priority, isDelayed: scheduleAt != nil) { $0.append(identifier) }
         }
     }
 
     private func _dequeue() -> JobID? {
-        if !self.pendingHigh.isEmpty {
+
+        let now = Date()
+
+        let delayed = self.delayed.filter { identifier in
+
+            guard let scheduledAt = self.jobs[identifier]?.scheduleAt else { return false }
+            return scheduledAt <= now
+
+        }.sorted {
+
+            guard let lhs = self.jobs[$0] else { return false }
+            guard let rhs = self.jobs[$1] else { return false }
+
+            switch (lhs.priority, rhs.priority) {
+            case (.high, .medium), (.high, .low):
+                return true
+            case (.low, .medium), (.low, .high):
+                return false
+            default:
+                return false
+            }
+        }
+
+        if let delayedJobID = delayed.first {
+            if let index = self.delayed.index(of: delayedJobID) {
+                self.delayed.remove(at: index)
+            }
+            return delayedJobID
+
+        } else if !self.pendingHigh.isEmpty {
             return self.pendingHigh.removeFirst()
+
         } else if !self.pendingMedium.isEmpty {
             return self.pendingMedium.removeFirst()
+
         } else if !self.pendingLow.isEmpty {
             return self.pendingLow.removeFirst()
+
         } else {
             return nil
         }
@@ -96,11 +138,11 @@ public class MemQueue: Queue {
                 return nil
             }
 
-            guard let job = self.jobs[jobID] else {
+            guard let jobBox = self.jobs[jobID] else {
                 throw MemQueueError.dataIntegrityFailure
             }
 
-            return (identifier: jobID, job: job)
+            return (identifier: jobID, job: jobBox.job)
         }
     }
 

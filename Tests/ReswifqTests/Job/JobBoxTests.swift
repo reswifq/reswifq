@@ -57,6 +57,7 @@ class JobBoxTests: XCTestCase {
             JobBox.EncodingKey.createdAt: box.createdAt.timeIntervalSince1970,
             JobBox.EncodingKey.type: box.type,
             JobBox.EncodingKey.timeToLive: box.timeToLive,
+            JobBox.EncodingKey.priority: box.priority.rawValue,
             JobBox.EncodingKey.job: try job.data().string(using: .utf8)
         ]
 

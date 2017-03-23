@@ -157,6 +157,41 @@ class ReswifqTests: XCTestCase {
         XCTAssertEqual(try self.queue.processingJobs().count, 3)
     }
 
+    func testDelayedJobs() throws {
+
+        try self.queue.enqueue(MockJob(value: "test1"))
+        try self.queue.enqueue(MockJob(value: "test2"), scheduleAt: Date())
+        try self.queue.enqueue(MockJob(value: "test3"), scheduleAt: Date())
+
+        _ = try self.queue.dequeue()
+        _ = try self.queue.dequeue()
+        _ = try self.queue.dequeue()
+
+        XCTAssertEqual(try self.queue.delayedJobs().count, 2)
+    }
+
+    func testOverdueJobs() throws {
+
+        try self.queue.enqueue(MockJob(value: "test1"))
+        try self.queue.enqueue(MockJob(value: "test2"), scheduleAt: Date(timeIntervalSinceNow: 3600.0))
+        try self.queue.enqueue(MockJob(value: "test3"), scheduleAt: Date(timeIntervalSince1970: 10.0))
+
+        XCTAssertEqual(try self.queue.overdueJobs().count, 1)
+    }
+
+    func testEnqueueOverdueJobs() throws {
+
+        try self.queue.enqueue(MockJob(value: "test1"))
+        try self.queue.enqueue(MockJob(value: "test2"), scheduleAt: Date(timeIntervalSinceNow: 3600.0))
+        try self.queue.enqueue(MockJob(value: "test3"), scheduleAt: Date(timeIntervalSince1970: 10.0))
+
+        try self.queue.enqueueOverdueJobs()
+
+        XCTAssertEqual(try self.queue.delayedJobs().count, 1)
+        XCTAssertEqual(try self.queue.overdueJobs().count, 0)
+        XCTAssertEqual(try self.queue.pendingJobs().count, 2)
+    }
+
     func testComplete() throws {
         try self.queue.enqueue(MockJob(value: "test1", timeToLive: 1.0))
         var persistedJob = try self.queue.dequeue()
@@ -226,6 +261,7 @@ class ReswifqTests: XCTestCase {
 
         XCTAssertEqual(Reswifq.RedisKey.Key.queuePending(.medium).components, ["queue", "pending", "medium"])
         XCTAssertEqual(Reswifq.RedisKey.Key.queueProcessing.components, ["queue", "processing"])
+        XCTAssertEqual(Reswifq.RedisKey.Key.queueDelayed.components, ["queue", "delayed"])
         XCTAssertEqual(Reswifq.RedisKey.Key.lock("test").components, ["lock", "test"])
         XCTAssertEqual(Reswifq.RedisKey.Key.retry("test").components, ["retry", "test"])
     }
