@@ -20,6 +20,7 @@
 //
 
 import Foundation
+import Dispatch
 
 public protocol ReswifcProcess {
 
