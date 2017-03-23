@@ -84,7 +84,7 @@ struct SendEmail: Job {
 
 In order to conform to the `Job` protocol we have to also conform to the `DataEncodable` and `DataDecodable` protocols. In other words, we have to tell Reswifq how to serialize and deserialize your job, a process you could already be familiar with, if you've used `NSCoding` before. In this example we are using JSON, but any format can be used as long as it's possible to convert the job from and to `Data`.
 
-In additions to the above we may want to also set the following properties (optional):
+In addition to the above we may want to also set the following properties (optional):
 
 - **type** - the job type as stored in the `jobMap`, default to the type name
 - **timeToLive** -  the maximum time a job can stay in the processing queue, default to 1 hour
