@@ -37,7 +37,7 @@ class WaitTests: XCTestCase {
         let startDate = Date()
 
         DispatchQueue.global().async { 
-            wait(seconds: 2)
+            sleep(2)
             expectation.fulfill()
         }
 

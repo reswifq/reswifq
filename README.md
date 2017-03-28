@@ -1,7 +1,7 @@
 ![reswifq-github-header](https://cloud.githubusercontent.com/assets/1882080/24265002/fea24aea-0ff9-11e7-9818-5c95301907db.png)
 
 # Reswifq
-![Swift](https://img.shields.io/badge/swift-3.0.2-brightgreen.svg)
+![Swift](https://img.shields.io/badge/swift-3.1-brightgreen.svg)
 [![Build Status](https://api.travis-ci.org/reswifq/reswifq.svg?branch=master)](https://travis-ci.org/reswifq/reswifq)
 [![Code Coverage](https://codecov.io/gh/reswifq/reswifq/branch/master/graph/badge.svg)](https://codecov.io/gh/reswifq/reswifq)
 
