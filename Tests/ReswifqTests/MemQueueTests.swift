@@ -27,7 +27,8 @@ class MemQueueTests: XCTestCase {
 
     static let allTests = [
         ("testDequeue", testDequeue),
-        ("testDequeuePriority", testDequeuePriority)
+        ("testDequeuePriority", testDequeuePriority),
+        ("testDequeueDelayed", testDequeueDelayed)
     ]
     
     func testDequeue() throws {
