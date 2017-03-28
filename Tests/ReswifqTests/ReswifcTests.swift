@@ -31,7 +31,8 @@ class ReswifcTests: XCTestCase {
     static let allTests = [
         ("testReswifc", testReswifc),
         ("testMonitorRetry", testMonitorRetry),
-        ("testMonitorMaxRetryAttempts", testMonitorMaxRetryAttempts)
+        ("testMonitorMaxRetryAttempts", testMonitorMaxRetryAttempts),
+        ("testScheduler", testScheduler)
     ]
 
     var queue: Reswifq!
