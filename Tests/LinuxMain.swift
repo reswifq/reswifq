@@ -23,14 +23,16 @@ import XCTest
 @testable import ReswifqTests
 
 XCTMain([
-    testCase(RandomTests.allTests),
-    testCase(WaitTests.allTests),
+    testCase(randomTests.allTests),
+    testCase(sleepTests.allTests),
     testCase(DataStringTests.allTests),
     testCase(StringDataTests.allTests),
     testCase(JobTests.allTests),
     testCase(JobBoxTests.allTests),
     testCase(WorkerTests.allTests),
     testCase(MemQueueTests.allTests),
-    testCase(ReswifqTests.allTests),
-    testCase(ReswifcTests.allTests)
+    testCase(ReswifqKituraTests.allTests),
+    testCase(ReswifqVaporTests.allTests),
+    testCase(ReswifcKituraTests.allTests),
+    testCase(ReswifcVaporTests.allTests)
     ])

@@ -14,7 +14,7 @@ Reswifq, comprises different parts:
 - A Swift package for creating, querying, and processing jobs
 - A generic [abstract module](https://github.com/reswifq/redis-client) to interface with any Swift Redis client
 - A [Kitura Redis client](https://github.com/reswifq/redis-client-kitura) adapter to use out of the box
-- A [Vapor Redis client](https://github.com/reswifq/redis-client-vapor) adapter to use out of the box (🚧 work in progress 🚧)
+- A [Vapor Redis client](https://github.com/reswifq/redis-client-vapor) adapter to use out of the box
 - A Dashboard app for monitoring queues, jobs, and workers. (🚧 work in progress 🚧)
 
 Reswifq workers can be distributed between multiple machines, are resilient to memory bloat / leaks, tell you what they're doing, and expect failure, unfortunately, [priorities are not supported](https://github.com/antirez/redis/issues/1785) at the moment.

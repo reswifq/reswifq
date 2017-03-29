@@ -1,5 +1,5 @@
 //
-//  ReswifcTests.swift
+//  ReswifcVaporTests.swift
 //  Reswifq
 //
 //  Created by Valerio Mazzeo on 22/03/2017.
@@ -22,11 +22,12 @@
 import XCTest
 import Foundation
 import Dispatch
-import SwiftRedis
 import RedisClient
+import Redis
+import VaporRedisClient
 @testable import Reswifq
 
-class ReswifcTests: XCTestCase {
+class ReswifcVaporTests: XCTestCase {
 
     static let allTests = [
         ("testReswifc", testReswifc),
@@ -40,12 +41,16 @@ class ReswifcTests: XCTestCase {
     override func setUp() {
         super.setUp()
 
-        let client = Redis()
-        client.connect(host: "localhost", port: 6379) { _ in }
-        client.flushdb { _, _ in }
+        do {
+            let client = VaporRedisClient(try TCPClient(hostname: "127.0.0.1", port: 6379))
+            _ = try client.execute("FLUSHALL", arguments: nil)
 
-        self.queue = Reswifq(client: client)
-        self.queue.jobMap[String(describing: MockJob.self)] = MockJob.self
+            self.queue = Reswifq(client: client)
+            self.queue.jobMap[String(describing: MockJob.self)] = MockJob.self
+
+        } catch let error {
+            XCTFail(error.localizedDescription)
+        }
     }
 
     override func tearDown() {
@@ -122,15 +127,16 @@ class ReswifcTests: XCTestCase {
         try self.queue.enqueue(MockJob(value: "test2"), scheduleAt: Date(timeIntervalSinceNow: 3600.0))
         XCTAssertEqual(try self.queue.pendingJobs().count, 0)
         XCTAssertEqual(try self.queue.delayedJobs().count, 2)
-
+        
         scheduler.process()
-
+        
         XCTAssertEqual(try self.queue.pendingJobs().count, 1)
         XCTAssertEqual(try self.queue.delayedJobs().count, 1)
     }
 }
 
-extension ReswifcTests {
+
+extension ReswifcVaporTests {
 
     class MockProcess: ReswifcProcess {
 
@@ -159,11 +165,11 @@ extension ReswifcTests {
             self.value = value
         }
 
-        init(data: Data) throws {
+        init(data: Foundation.Data) throws {
             self.value = try data.string(using: .utf8)
         }
 
-        func data() throws -> Data {
+        func data() throws -> Foundation.Data {
             return try self.value.data(using: .utf8)
         }
 

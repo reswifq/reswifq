@@ -82,7 +82,7 @@ public class Worker {
             let workItem = self.makeWorkItem {
 
                 if self.averagePollingInterval > 0 {
-                    wait(seconds: random(self.averagePollingInterval))
+                    sleep(seconds: random(self.averagePollingInterval))
                 }
 
                 self.semaphore.signal()

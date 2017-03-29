@@ -1,5 +1,5 @@
 //
-//  ReswifqTests.swift
+//  ReswifqKituraTests.swift
 //  Reswifq
 //
 //  Created by Valerio Mazzeo on 22/03/2017.
@@ -26,9 +26,10 @@ import SwiftRedis
 import KituraRedisClient
 @testable import Reswifq
 
-class ReswifqTests: XCTestCase {
+class ReswifqKituraTests: XCTestCase {
 
     static let allTests = [
+        ("testPerformance", testPerformance),
         ("testEnqueue", testEnqueue),
         ("testDequeue", testDequeue),
         ("testDequeueEmpty", testDequeueEmpty),
@@ -60,6 +61,14 @@ class ReswifqTests: XCTestCase {
     override func tearDown() {
         self.queue = nil
         super.tearDown()
+    }
+
+    func testPerformance() throws {
+
+        self.measure {
+            try! self.queue.enqueue(MockJob(value: "test"))
+            _ = try! self.queue.dequeue()
+        }
     }
 
     func testEnqueue() throws {
@@ -270,7 +279,7 @@ class ReswifqTests: XCTestCase {
     }
 }
 
-extension ReswifqTests {
+extension ReswifqKituraTests {
 
     struct MockJob: Job, Equatable {
 

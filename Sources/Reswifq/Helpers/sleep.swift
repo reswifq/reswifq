@@ -1,5 +1,5 @@
 //
-//  wait.swift
+//  sleep.swift
 //  Reswifq
 //
 //  Created by Valerio Mazzeo on 26/02/2017.
@@ -21,7 +21,7 @@
 
 import Foundation
 
-public func wait(seconds: UInt32) {
+public func sleep(seconds: UInt32) {
     let factor = 1000 * 1000
     let microseconds = seconds * UInt32(factor)
     usleep(useconds_t(microseconds))

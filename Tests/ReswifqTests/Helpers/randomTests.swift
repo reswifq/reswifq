@@ -1,5 +1,5 @@
 //
-//  WaitTests.swift
+//  randomTests.swift
 //  Reswifq
 //
 //  Created by Valerio Mazzeo on 26/02/2017.
@@ -20,31 +20,18 @@
 //
 
 import XCTest
-import Foundation
-import Dispatch
 @testable import Reswifq
 
-class WaitTests: XCTestCase {
+class RandomTests: XCTestCase {
 
     static let allTests = [
-        ("testWait", testWait)
+        ("testRandom", testRandom)
     ]
 
-    func testWait() {
+    func testRandom() {
 
-        let expectation = self.expectation(description: "wait")
-
-        let startDate = Date()
-
-        DispatchQueue.global().async { 
-            sleep(2)
-            expectation.fulfill()
+        for _ in 0..<100 {
+            XCTAssertLessThanOrEqual(random(10), 10)
         }
-
-        self.waitForExpectations(timeout: 4.0, handler: nil)
-
-        let waitInterval = Date().timeIntervalSince(startDate)
-
-        XCTAssertEqualWithAccuracy(waitInterval, 2.0, accuracy: 0.5)
     }
 }

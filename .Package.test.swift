@@ -28,6 +28,7 @@ let package = Package(
 	],
 	dependencies: [
 		.Package(url: "https://github.com/reswifq/redis-client.git", majorVersion: 1),
+		.Package(url: "https://github.com/reswifq/redis-client-vapor.git", majorVersion: 1),
 		.Package(url: "https://github.com/reswifq/redis-client-kitura.git", majorVersion: 1)
 	]
 )
