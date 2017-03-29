@@ -23,8 +23,8 @@ import XCTest
 @testable import ReswifqTests
 
 XCTMain([
-    testCase(randomTests.allTests),
-    testCase(sleepTests.allTests),
+    testCase(RandomTests.allTests),
+    testCase(SleepTests.allTests),
     testCase(DataStringTests.allTests),
     testCase(StringDataTests.allTests),
     testCase(JobTests.allTests),

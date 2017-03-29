@@ -24,7 +24,7 @@ import Foundation
 import Dispatch
 @testable import Reswifq
 
-class WaitTests: XCTestCase {
+class SleepTests: XCTestCase {
 
     static let allTests = [
         ("testWait", testWait)
