@@ -45,6 +45,6 @@ class SleepTests: XCTestCase {
 
         let waitInterval = Date().timeIntervalSince(startDate)
 
-        XCTAssertEqualWithAccuracy(waitInterval, 2.0, accuracy: 0.5)
+        XCTAssertEqual(waitInterval, 2.0, accuracy: 0.5)
     }
 }
