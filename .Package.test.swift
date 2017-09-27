@@ -1,3 +1,5 @@
+// swift-tools-version:4.0
+
 //
 //  .Package.test.swift
 //  Reswifq
@@ -21,14 +23,20 @@
 
 import PackageDescription
 
+import PackageDescription
+
 let package = Package(
 	name: "Reswifq",
-	targets: [
-		Target(name: "Reswifq")
+	products: [
+		.library(name: "Reswifq", targets: ["Reswifq"])
 	],
 	dependencies: [
-		.Package(url: "https://github.com/reswifq/redis-client.git", majorVersion: 1),
-		.Package(url: "https://github.com/reswifq/redis-client-vapor.git", majorVersion: 1),
-		.Package(url: "https://github.com/reswifq/redis-client-kitura.git", majorVersion: 1)
+		.package(url: "https://github.com/reswifq/redis-client.git", .upToNextMajor(from: "1.2.0")),
+		.package(url: "https://github.com/reswifq/redis-client-vapor.git", .upToNextMajor(from: "1.1.0")),
+		.package(url: "https://github.com/reswifq/redis-client-kitura.git", .upToNextMajor(from: "1.2.0"))
+	],
+	targets: [
+		.target(name: "Reswifq", dependencies: ["RedisClient"]),
+		.testTarget(name: "ReswifqTests", dependencies: ["Reswifq", "VaporRedisClient", "KituraRedisClient"])
 	]
 )
