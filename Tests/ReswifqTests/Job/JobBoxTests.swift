@@ -39,7 +39,7 @@ class JobBoxTests: XCTestCase {
         let box = try JobBox(job)
 
         XCTAssertNotNil(box.identifier)
-        XCTAssertEqualWithAccuracy(box.createdAt.timeIntervalSince1970, Date().timeIntervalSince1970, accuracy: 2.0)
+        XCTAssertEqual(box.createdAt.timeIntervalSince1970, Date().timeIntervalSince1970, accuracy: 2.0)
         XCTAssertEqual(box.type, "MockJob")
         XCTAssertEqual(box.timeToLive, 3600.0)
         XCTAssertEqual(box.job, Data())
@@ -75,7 +75,7 @@ class JobBoxTests: XCTestCase {
         let decodedBox = try JobBox(data: boxData)
 
         XCTAssertEqual(decodedBox.identifier, box.identifier)
-        XCTAssertEqualWithAccuracy(decodedBox.createdAt.timeIntervalSince1970, box.createdAt.timeIntervalSince1970, accuracy: 0.001)
+        XCTAssertEqual(decodedBox.createdAt.timeIntervalSince1970, box.createdAt.timeIntervalSince1970, accuracy: 0.001)
         XCTAssertEqual(decodedBox.type, box.type)
         XCTAssertEqual(decodedBox.timeToLive, box.timeToLive)
         XCTAssertEqual(decodedBox.job, box.job)

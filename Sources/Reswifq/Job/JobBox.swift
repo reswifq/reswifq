@@ -28,7 +28,7 @@ struct JobBox {
     public init(_ job: Job, priority: QueuePriority = .medium) throws {
         self.identifier = UUID().uuidString
         self.createdAt = Date()
-        self.type = type(of: job).type
+        self.type = Swift.type(of: job).type
         self.timeToLive = job.timeToLive
         self.priority = priority
         self.job = try job.data()
